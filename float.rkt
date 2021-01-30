@@ -101,7 +101,7 @@
                    [frac        (+ 1 (reify-frac man))]
                    [shifted-exp (reify-exp stored-exp)]
                   )
-              (* sign (expt 2 shited-exp) frac)
+              (* sign (expt 2 shifted-exp) frac)
             )] 
       )
   )
