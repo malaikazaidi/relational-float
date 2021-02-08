@@ -2,6 +2,7 @@
 
 (require "mk.rkt")
 (require "numbers.rkt")
+(require "test-numbers.rkt")
 
 (define float-format '(sign
                        expo ; Oleg number
@@ -27,7 +28,33 @@
          ((<o n2 n1)
           (== m n1))))
 
+#|
+Drops most significant bit in the mantissa.
+|#
+(define (drop-mostsig-bito frac fracr)
+  (conde ((== frac '())
+          (== fracr frac))
+         ((fresh (frachead)
+                 (conde ((appendo frachead '(0) frac))
+                        ((appendo frachead '(1) frac)))
+                 (== fracr frachead)))))
 
+#|
+Drops least significant bit in the mantissa, where cap is 23 bits.
+|#
+(define (drop-leastsig-bito frac fracr)
+  (conde ((== frac '())
+          (== fracr frac))
+         ((fresh (fracfst fracrst)
+                 (== frac (cons fracfst fracrst))
+                 (conde ((<o (build-num 16777215) frac)
+                         (drop-leastsig-bito fracrst fracr))
+                        ((<=o frac (build-num 16777215))
+                         (== fracr frac)))))))
+                   
+#|
+Shifts the exponent. 
+|# 
 (define (shifto frac n result)
   (conde ((zeroo n)
           (== frac result))
@@ -35,19 +62,34 @@
           (fresh (shifted-frac n-minus-1)
             (== shifted-frac (cons 0 frac))
             (pluso n-minus-1 '(1) n)
-            (shifto shifted-frac n-minus-1 result)))))
+            (shifto shifted-frac n-minus-1 result)
+            ))))
 
-(define (shift-expo man2 manr exp2 expr)
-  (conde ((== man2 '())
-          (== manr '())
-          (== exp2 expr))
-         ((== man2 '())
-          (=/= manr '())
-          (pluso exp2 '(1) expr))
-         ((fresh (man2f man2r manrf manrr)
-            (== man2 (cons man2f man2r))
-            (== manr (cons manrf manrr))
-            (shift-expo man2r manrr exp2 expr)))))
+(define (shift-expo man man-sum exp exp-sum)
+  (conde ((== man '())
+          (== man-sum '())
+          (== exp exp-sum))
+         ((== man '())
+          (=/= man-sum '())
+          (pluso exp '(1) exp-sum))
+         ((fresh (manfst manrst man-sumfst man-sumrst)
+            (== man (cons manfst manrst))
+            (== man-sum (cons man-sumfst man-sumrst))
+            (shift-expo manrst man-sumrst exp exp-sum)))))
+#|
+Shifts exponent for denormalized nums
+|# 
+(define (shift-expod man-sum exp exp-sum)
+  (conde ((== man-sum '())
+          (== exp exp-sum))
+         ((<o (build-num 8388607) man-sum)
+          (pluso exp '(1) exp-sum))
+         ((=/= man-sum '())
+          (<=o man-sum (build-num 8388607))
+          (== exp exp-sum))))
+        
+  
+
 ;(conde ((=lengtho man-sum man2)
 ;        (== exp2 exp-result))
 ;       ((>lengtho man-sum man2)
@@ -60,9 +102,6 @@
 ; (1 1 1 1 1 1 1 1 1 1 1 0 0 1) - man-sum
 
 
-
-
-
 (define (fp-pluso f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
     (== f1 (list sign1 expo1 frac1))
@@ -72,23 +111,46 @@
        (<o expo2 expo1)
        (fp-pluso f2 f1 r)) ; just swap the args
       ((== sign1 sign2)
-       (<=lo expo1 expo2)
-       (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result)
-         (pluso expo1 expo-diff expo2)
-         ;shift the frac of the SMALLER exponent
-         (shifto frac2 expo-diff shifted-frac2)
-         ; get mantissas
-         ;this doesn't work for denormalized num-s
-         (appendo frac1 '(1) man1)
-         (appendo shifted-frac2 '(1) man2)
-         ; oleg number addition
-         (pluso man1 man2 man-sum)
-         ; exponent shift
-         (shift-expo man2 man-sum expo2 exp-result)
-         ; return result
-         ;(appendo frac-result '(1) man-sum)
-         (== r (list sign1 expo2 man1))
-
+       (<=o expo1 expo2)
+       ;keep frac-result as final return value
+       ;check if denormalized
+       (conde ((fresh (man-sum shifted-exp man-result)
+                     (== expo1 '())
+                     (== expo2 '())
+                     ; oleg number addition
+                     (pluso frac1 frac2 man-sum)
+                     ; exponent shift
+                     (shift-expod man-sum expo2 shifted-exp)
+                     (conde ((=/= shifted-exp '())
+                             (drop-mostsig-bito man-sum man-result))
+                            ((== shifted-exp '())
+                             (== man-sum man-result)))
+                
+                     (== r (list sign1 shifted-exp man-result))
+                     ))
+              ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
+    
+                      (=/= expo2 '())
+                      (pluso expo1 expo-diff expo2)
+                      ;shift the frac of the SMALLER exponent
+                      (shifto frac2 expo-diff shifted-frac2)
+                      ; get mantissas
+                      ;this doesn't work for denormalized num-s
+                      (appendo frac1 '(1) man1)
+                      (appendo shifted-frac2 '(1) man2)
+                      ; oleg number addition
+                      (pluso man1 man2 man-sum)
+                      ; exponent shift
+                      (shift-expo man2 man-sum expo2 exp-result)
+                      ;drop least-sig bit
+                      (drop-leastsig-bito man-sum man-result) 
+                             
+                      ;drop most-sig bit
+                      (drop-mostsig-bito man-result frac-result)
+    
+                      ; return result
+                      ;(appendo frac-result '(1) man-sum)
+                      (== r (list sign1 exp-result frac-result))))
 
          )
        )
@@ -97,51 +159,5 @@
    )))
 
 
-
-(displayln
-  (run 1 (x) (get-signo '(1 (0 0 0 0 0) (1 1 1)) x)))
-(displayln
-  (run 1 (x) (get-expo '(1 (0 0 0 0 0) (1 1 1)) x)))
-(displayln
-  (run 1 (x) (get-fraco '(1 (0 0 0 0 0) (1 1 1)) x)))
-
-; maxo
-(displayln
-  (run 2 (x) (maxo (build-num 1) (build-num 2) x)))
-(displayln
-  (run 2 (x) (maxo (build-num 2) (build-num 2) x))) ; 1 elemet
-(displayln
-  (run 2 (x) (maxo (build-num 3) (build-num 2) x)))
-
-;shifto
-(displayln
-  (run 2 (x) (shifto '(1 0 1 0 1 0) (build-num 3) x)))
-(displayln
-  (run 2 (x) (shifto '(1 0 1 0 1 0) (build-num 0) x)))
-
-
-(displayln
-  (run* (r) (<=lo (build-num 8) (build-num 9))))
-
-; main test
-
-(define f1 (list 0 (build-num 8) '(1 0 1 0 1 0 1 0 1 0 1)))
-(define f2 (list 0 (build-num 9) '(1 0 1 0 1 0 1 0 1 0 1)))
-
-(displayln
-  (run 2 (r) (fp-pluso f1 f2 r)))
-
-;# length should be same as man2
-;# except probably 1 bigger if carry
-;# in which case we need to increase the
-;# exponent
-;(1 1 1 1 1 1 1 1 1 1 1 1)
-
-(displayln
-  (run 2 (r) (shift-expo 
-               '(1 0 1 0 1 0 1 0 1 0 1 1)
-               '(1 1 1 1 1 1 1 1 1 1 1 0 0 1)
-               (build-num 8)
-               r)))
 
 
