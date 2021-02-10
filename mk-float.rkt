@@ -7,19 +7,19 @@
 (define float-format '(sign
                        expo ; Oleg number
                        frac ; kind of Oleg number?
-                      ))
+                       ))
 
 (define (get-signo f sign)
   (fresh (expo frac)
-    (== f (list sign expo frac))))
+         (== f (list sign expo frac))))
 
 (define (get-expo f expo)
   (fresh (sign frac)
-    (== f (list sign expo frac))))
+         (== f (list sign expo frac))))
 
 (define (get-fraco f frac)
   (fresh (sign expo)
-    (== f (list sign expo frac))))
+         (== f (list sign expo frac))))
 
 ; delete?
 (define (maxo n1 n2 m)
@@ -60,10 +60,10 @@ Shifts the exponent.
           (== frac result))
          ((poso n)
           (fresh (shifted-frac n-minus-1)
-            (== shifted-frac (cons 0 frac))
-            (pluso n-minus-1 '(1) n)
-            (shifto shifted-frac n-minus-1 result)
-            ))))
+                 (== shifted-frac (cons 0 frac))
+                 (pluso n-minus-1 '(1) n)
+                 (shifto shifted-frac n-minus-1 result)
+                 ))))
 
 (define (shift-expo man man-sum exp exp-sum)
   (conde ((== man '())
@@ -73,9 +73,9 @@ Shifts the exponent.
           (=/= man-sum '())
           (pluso exp '(1) exp-sum))
          ((fresh (manfst manrst man-sumfst man-sumrst)
-            (== man (cons manfst manrst))
-            (== man-sum (cons man-sumfst man-sumrst))
-            (shift-expo manrst man-sumrst exp exp-sum)))))
+                 (== man (cons manfst manrst))
+                 (== man-sum (cons man-sumfst man-sumrst))
+                 (shift-expo manrst man-sumrst exp exp-sum)))))
 #|
 Shifts exponent for denormalized nums
 |# 
@@ -88,8 +88,17 @@ Shifts exponent for denormalized nums
           (<=o man-sum (build-num 8388607))
           (== exp exp-sum))))
         
-  
+#|
+Negates sign
+|#  
+(define (negsigno sign nsign)
+  (conde ((== sign 1)
+          (== nsign 0))
+         ((== sign 0)
+          (== nsign 1))))
 
+
+         
 ;(conde ((=lengtho man-sum man2)
 ;        (== exp2 exp-result))
 ;       ((>lengtho man-sum man2)
@@ -104,60 +113,90 @@ Shifts exponent for denormalized nums
 
 (define (fp-pluso f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-    (== f1 (list sign1 expo1 frac1))
-    (== f2 (list sign2 expo2 frac2))
-    (conde
-      ((== sign1 sign2)
-       (<o expo2 expo1)
-       (fp-pluso f2 f1 r)) ; just swap the args
-      ((== sign1 sign2)
-       (<=o expo1 expo2)
-       ;keep frac-result as final return value
-       ;check if denormalized
-       (conde ((fresh (man-sum shifted-exp man-result)
-                     (== expo1 '())
-                     (== expo2 '())
-                     ; oleg number addition
-                     (pluso frac1 frac2 man-sum)
-                     ; exponent shift
-                     (shift-expod man-sum expo2 shifted-exp)
-                     (conde ((=/= shifted-exp '())
-                             (drop-mostsig-bito man-sum man-result))
-                            ((== shifted-exp '())
-                             (== man-sum man-result)))
+         (== f1 (list sign1 expo1 frac1))
+         (== f2 (list sign2 expo2 frac2))
+         (conde ((<o expo2 expo1)
+                 (fp-pluso f2 f1 r))
+                ((<=o expo1 expo2)
+                 (conde
+                  ((== sign1 sign2)
+                   ;keep frac-result as final return value
+                   ;check if denormalized
+                   (conde ((fresh (man-sum shifted-exp man-result)
+                                  (== expo1 '())
+                                  (== expo2 '())
+                                  ; oleg number addition
+                                  (pluso frac1 frac2 man-sum)
+                                  ; exponent shift
+                                  (shift-expod man-sum expo2 shifted-exp)
+                                  (conde ((=/= shifted-exp '())
+                                          (drop-mostsig-bito man-sum man-result))
+                                         ((== shifted-exp '())
+                                          (== man-sum man-result)))
                 
-                     (== r (list sign1 shifted-exp man-result))
-                     ))
-              ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
+                                  (== r (list sign1 shifted-exp man-result))
+                                  ))
+                          ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
     
-                      (=/= expo2 '())
-                      (pluso expo1 expo-diff expo2)
-                      ;shift the frac of the SMALLER exponent
-                      (shifto frac2 expo-diff shifted-frac2)
-                      ; get mantissas
-                      ;this doesn't work for denormalized num-s
-                      (appendo frac1 '(1) man1)
-                      (appendo shifted-frac2 '(1) man2)
-                      ; oleg number addition
-                      (pluso man1 man2 man-sum)
-                      ; exponent shift
-                      (shift-expo man2 man-sum expo2 exp-result)
-                      ;drop least-sig bit
-                      (drop-leastsig-bito man-sum man-result) 
+                                  (=/= expo2 '())
+                                  (pluso expo1 expo-diff expo2)
+                                  ;shift the frac of the SMALLER exponent
+                                  (shifto frac2 expo-diff shifted-frac2)
+                                  ; get mantissas
+                                  (appendo frac1 '(1) man1)
+                                  (appendo shifted-frac2 '(1) man2)
+                                  ; oleg number addition
+                                  (pluso man1 man2 man-sum)
+                                  ; exponent shift
+                                  (shift-expo man2 man-sum expo2 exp-result)
+                                  ;drop least-sig bit
+                                  (drop-leastsig-bito man-sum man-result) 
                              
-                      ;drop most-sig bit
-                      (drop-mostsig-bito man-result frac-result)
+                                  ;drop most-sig bit
+                                  (drop-mostsig-bito man-result frac-result)
     
-                      ; return result
-                      ;(appendo frac-result '(1) man-sum)
-                      (== r (list sign1 exp-result frac-result))))
+                                  ; return result
+                                  ;(appendo frac-result '(1) man-sum)
+                                  (== r (list sign1 exp-result frac-result))))))
 
-         )
-       )
-      ((=/= sign1 sign2))
+                  ;when signs are opposite
+                  ((=/= sign1 sign2)
+                   (conde ((== 0 sign2) ; (-a)+b
+                           (fresh (nres exp man sign nsign)
+                                  (fp-pluso f2 f1 nres) ; swap args
+                                  (== nres (list sign exp man))
+                                  (negsigno sign nsign)
+                                  (== r (list nsign exp man))))
+                          ((== 1 sign2) ; a+ (-b)
+                           ;keep frac-result as final return value
+                           ;check if denormalized
+                           (conde ( (== expo1 '())
+                                    (== expo2 '())
+                                    ;to do
+                                    )
+                                  ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
+    
+                                          (=/= expo2 '())
+                                          (pluso expo1 expo-diff expo2)
+                                          ;shift the frac of the SMALLER exponent
+                                          (shifto frac2 expo-diff shifted-frac2)
+                                          ; get mantissas
+                                          (appendo frac1 '(1) man1)
+                                          (appendo shifted-frac2 '(1) man2)
+                                          ; oleg number addition
+                                          (pluso man1 man2 man-sum)
+                                          ; exponent shift
+                                          (shift-expo man2 man-sum expo2 exp-result)
+                                          ;drop least-sig bit
+                                          (drop-leastsig-bito man-sum man-result) 
+                             
+                                          ;drop most-sig bit
+                                          (drop-mostsig-bito man-result frac-result)
+    
+                                          ; return result
+                                          (== r (list sign1 exp-result frac-result)))))))))
 
-   )))
-
+                 ))))
 
 
 
