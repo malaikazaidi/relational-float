@@ -1,13 +1,16 @@
 #lang racket
+
+(provide reify reify-exp reify-frac reify-sign get-sign get-frac get-exp POS-INFINITY NEG-INFINITY qNaN sNaN FP-ERR)
+
 (define float-format '(
                        b31
-                       b23 b24 b25 b26 b27 b28 b29 b30 ; little endian exp
-                       b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22; little endian mantissa
-                     ))
+                       'olegexponenntn ; little endian exp
+                       'oleg mantissa; little endian mantissa
+                      ))
 (define num '(;sign
               0 ; positive
-              1 1 1 1 1 1 1 1 ;exponent ; first bit is the least significant
-              0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 ; mantissa ; first bit is the least significant
+              '(1 1 1 1 1 1 1 1) ;exponent ; first bit is the least significant
+              '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0) ; mantissa ; first bit is the least significant
               )
 )
 
@@ -21,9 +24,10 @@
 ; Constants for floats that aren't numbers
 (define POS-INFINITY 'positive-infinity)
 (define NEG-INFINITY 'negative-infinity)
-(define NaN 'NaN)
+(define qNaN 'qNaN)
+(define sNaN 'sNaN)
 
-(define ZERO-EXP '(0 0 0 0 0 0 0 0)) ; For detecting denormalized numbers
+(define ZERO-EXP '()) ; For detecting denormalized numbers
 (define FULL-EXP '(1 1 1 1 1 1 1 1)) ; For detecting +/- infinity or NaN
 
 #|
@@ -38,14 +42,14 @@
   f: A MKFP number
   Returns the eight exponent bits of f. 
 |#
-(define (get-exp f) (take (rest f) EXP-LEN))
+(define (get-exp f) (second f))
 
 #|
 (get-frac f)
   f: A MKFP number
   Returns the 23 fractional bits of f. Also known as the significand or mantissa. 
 |#
-(define (get-frac f) (list-tail f MANTISSA-POS))
+(define (get-frac f) (third f))
 
 #|
 (inf? exp man)
@@ -56,12 +60,22 @@
 (define (inf? exp man)       (and (equal? exp FULL-EXP) (equal? 0 (apply + man))))
 
 #|
-(NaN? exp man)
+(qNaN? exp man)
   exp: The exponent bits of a MKFP number.
   man: The mantissa bits of a MKFP number.
-  Returns true if and only if all the exponent bits are 1 and if not all the mantissa bits are 0. 
+
+  Returns true iff all the exponent bits are 1 and the most significant bit of the mantissa is 1.
 |#
-(define (NaN? exp man)       (and (equal? exp FULL-EXP) (not (equal? 0 (apply + man)))))
+(define (qNaN? exp man)       (and (equal? exp FULL-EXP) (equal? 1 (last man))))
+
+#|
+(sNaN? exp man)
+  exp: The exponent bits of a MKFP number.
+  man: The mantissa bits of a MKFP number.
+
+  Returns true iff all the exponent bits are 1 and the most significant bit of the mantissa is 0 and there are other mantissa bits set to 1.
+|#
+(define (sNaN? exp man)       (and (equal? exp FULL-EXP) (not (equal? 0 (apply + man))) (equal? 0 (last man))))
 
 #|
 (zero? exp man)
@@ -94,9 +108,10 @@
       [(inf? stored-exp man) (cond
                                [(equal? 1 sign) POS-INFINITY]
                                [(equal? -1 sign) NEG-INFINITY])]
-      [(NaN? stored-exp man) NaN]
+      [(qNaN? stored-exp man) qNaN]
+      [(sNaN? stored-exp man) sNaN]
       [(subnormal? stored-exp man) (* sign (expt 2 -126) (reify-frac man))]
-      ((zero? stored-exp man) 0)
+      [(zero? stored-exp man) 0]
       [else (let* (
                    [frac        (+ 1 (reify-frac man))]
                    [shifted-exp (reify-exp stored-exp)]
@@ -108,26 +123,41 @@
 )
 
 #|
+(binary-exponent-folder bit acc-pair)
+  bit: A 1 or a 0. int?
+  acc-pair: (k, total) pair?
+
+    k: The current exponent.
+    total: The current binary sum total.
+
+  Given a bit and an accumulator, we return a new accumulator (k+1, (+ total (* bit (expt 2 k)))).
+|#
+(define/match (binary-exponent-folder bit acc-pair)
+  [(0 (cons k total)) (cons (+ k 1) total)]
+  [(1 (cons k total)) (let* ([new-exp (+ 1 k)]
+                             [new-total (+ total (expt 2 k))])
+                        (cons new-exp new-total))]
+  [(_ _) (cons 0 0)])
+
+#|
+(make-binary-folder init-exp)
+  init-exp: defines the intial exponent to be used to recurse over a list.
+
+  Returns a function that takes in a bit-list and returns the value it represents shifted by init-exp.
+|#
+(define (make-exp-shifted-binary-folder init-exp)
+  (lambda (lst)
+    (let* ([acc-pair (foldl binary-exponent-folder (cons init-exp 0) lst)])
+      (cdr acc-pair))))
+
+#|
 (reify-frac man)
   man: The mantissa bits of a MKFP number.
   Returns the Racket float equivallent of what the mantissa is. 
 |#
-(define/match (reify-frac man)
-  [((list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9
-          b10 b11 b12 b13 b14 b15 b16 b17 b18 b19 b20 b21 b22)) (+  (* b0 (expt 2 -23))  (* b1 (expt 2 -22))
-                                                                    (* b2 (expt 2 -21))  (* b3 (expt 2 -20))
-                                                                    (* b4 (expt 2 -19))  (* b5 (expt 2 -18))
-                                                                    (* b6 (expt 2 -17))  (* b7 (expt 2 -16))
-                                                                    (* b8 (expt 2 -15))  (* b9 (expt 2 -14))
-                                                                   (* b10 (expt 2 -13)) (* b11 (expt 2 -12))
-                                                                   (* b12 (expt 2 -11)) (* b13 (expt 2 -10))
-                                                                   (* b14 (expt 2 -9))  (* b15 (expt 2 -8))
-                                                                   (* b16 (expt 2 -7))  (* b17 (expt 2 -6))
-                                                                   (* b18 (expt 2 -5))  (* b19 (expt 2 -4))
-                                                                   (* b20 (expt 2 -3))  (* b21 (expt 2 -2))
-                                                                   (* b22 (expt 2 -1)))]
-  [(_) FP-ERR]
-)
+(define (reify-frac man)
+  (let* ([shifted-binary-expander (make-exp-shifted-binary-folder -23)])
+    (shifted-binary-expander man)))
 
 #|
 (reify-sign man)
@@ -140,12 +170,13 @@
   [(_) FP-ERR]
 )
 
+
 #|
 (reify-exp exp)
   exp: The exponent bits of a MKFP number.
   Returns the value of the shifted exponent. 
 |#
-(define/match (reify-exp exp)
-  [((list b23 b24 b25 b26 b27 b28 b29 b30)) (+ -127 b23 (* 2 b24) (* 4 b25) (* 8 b26) (* 16 b27) (* 32 b28) (* 64 b29) (* 128 b30))]
-  [(_) FP-ERR]
-)
+(define (reify-exp exp)
+  (let* ([noshift-binary-expander (make-exp-shifted-binary-folder 0)])
+         (+ -127 (noshift-binary-expander exp))))
+

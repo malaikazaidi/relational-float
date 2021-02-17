@@ -2,7 +2,7 @@
 (require "numbers.rkt")
 (provide zero one smallnorm largenorm seventytwo neg421 negseventy fortytwo sixty
          p2049 three n1020.625 n45.125 p12.8 p12.5 n45.2 p0.636018991
-         psmallestd plargestd underf p2^23)
+         psmallestd plargestd underf p2^23 pinf ninf qnan snan)
 
 
 (define/match (build-exp num)
@@ -36,7 +36,10 @@
 (define psmallestd `(0 ,(build-num 0) (1)))
 (define plargestd `(0 ,(build-num 0) ,(make-list 23 1))); 2^-126 * (1-2^(-23))
 (define underf `(0 ,(build-num 103) ,(make-list 23 0) ))
-(define p2^23 `(0 ,(build-num 104) ,(make-list 23 0)))
-
+(define p2^23 `(0 ,(build-num 104) ,(make-list 23 0)));-23
+(define pinf `(0 (1 1 1 1 1 1 1 1) ,(make-list 23 0)))
+(define ninf `(1 (1 1 1 1 1 1 1 1) ,(make-list 23 0)))
+(define qnan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1))); Only most sig bit is important for distinguishing nans
+(define snan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0)))
 
 
