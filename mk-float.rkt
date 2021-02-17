@@ -21,13 +21,6 @@
   (fresh (sign expo)
          (== f (list sign expo frac))))
 
-; delete?
-(define (maxo n1 n2 m)
-  (conde ((<=o n1 n2)
-          (== m n2))
-         ((<o n2 n1)
-          (== m n1))))
-
 #|
 Drops most significant bit in the mantissa.
 |#
@@ -97,8 +90,79 @@ Negates sign
          ((== sign 0)
           (== nsign 1))))
 
+#|
+Detects if there is at least one bit set
+|#
+(define (anybito bit-lst)
+  (conde ((== bit-lst '(1)))
+         ((=/= bit-lst '(1)) ;Where we have at least 2 elements
+          (fresh (first-bit rest-lst)
+                 (== bit-lst (cons first-bit rest-lst))
+                 (conde ((== first-bit 0) ; need to recurse
+                         (anybito rest-lst)) 
+                        ((== first-bit 1))))))) ; we are done.
 
-         
+
+#|
+Checks if the bit list has exactly 22 bits.
+Can't think of a better way. ask lisa.
+|#
+(define (has22-bitso lst)
+  (<=o lst '(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1))
+  (<o '(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ) lst))
+
+#|
+Detects any inf
+|#
+(define (info mkfp)
+  (conde ((posinfo mkfp))
+         ((neginfo mkfp))))
+
+#|
+Detects pos inf
+|#
+(define (posinfo mkfp)
+  (fresh (sign exp frac)
+         (== mkfp (list sign exp frac))
+         (== sign 0)
+         (== frac '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
+         (== exp '(1 1 1 1 1 1 1 1))))
+
+#|
+Detects neg inf
+|#
+(define (neginfo mkfp)
+  (fresh (sign exp frac)
+         (== mkfp (list sign exp frac))
+         (== sign 1)
+         (== frac '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
+         (== exp '(1 1 1 1 1 1 1 1))))
+
+#|
+Detects qNaN
+(technically works but its too slow; culprit hasn-bitso)
+|#
+(define (qNaNo mkfp)
+  (fresh (sign exp frac partial-frac)
+         (== mkfp (list sign exp frac))
+         (conde ((== sign 1)) ((== sign 0))) ; just to ensure we have a correct sign.
+         (== exp '(1 1 1 1 1 1 1 1))
+         (has22-bitso partial-frac);'(0 1 1 0 1) = 22
+         (appendo partial-frac '(1) frac))) 
+
+#|
+Detects sNaN
+(technically works but its too slow; culprit hasn-bitso)
+|#
+(define (sNaNo mkfp)
+  (fresh (sign exp frac partial-frac)
+         (== mkfp (list sign exp frac))
+         (conde ((== sign 1)) ((== sign 0))) ; just to ensure we have a correct sign.
+         (== exp '(1 1 1 1 1 1 1 1))
+         (appendo partial-frac '(0) frac)
+         (has22-bitso partial-frac)
+         (anybito partial-frac)))
+
 ;(conde ((=lengtho man-sum man2)
 ;        (== exp2 exp-result))
 ;       ((>lengtho man-sum man2)
