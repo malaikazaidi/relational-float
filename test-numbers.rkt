@@ -2,7 +2,7 @@
 (require "numbers.rkt")
 (provide zero one smallnorm largenorm seventytwo neg421 negseventy fortytwo sixty
          p2049 three n1020.625 n45.125 p12.8 p12.5 n45.2 p0.636018991
-         psmallestd plargestd underf p2^23 pinf ninf qnan snan)
+         psmallestd plargestd underf p2^23 pinf ninf qnan snan four)
 
 
 (define/match (build-exp num)
@@ -20,6 +20,7 @@
 (define one `(0 ,(build-num 127) ,(make-list 23 0)))
 (define smallnorm `(0 ,(build-num 1) ,(make-list 23 0)))
 (define largenorm `(0 ,(build-num 254) ,(make-list 23 1)))
+(define four `(0 ,(build-num 129) ,(make-list 23 0)))
 (define seventytwo `(0 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)))
 (define neg421 `(1 ,(build-num 135) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 1)))
 (define negseventy `(1 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0)))
