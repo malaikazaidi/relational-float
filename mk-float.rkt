@@ -21,6 +21,7 @@
   (fresh (sign expo)
          (== f (list sign expo frac))))
 
+
 #|
 Drops most significant bit in the mantissa.
 |#
@@ -35,16 +36,27 @@ Drops most significant bit in the mantissa.
 #|
 Drops least significant bit in the mantissa, where cap is 23 bits.
 |#
+
 (define (drop-leastsig-bito frac fracr)
   (conde ((== frac '())
           (== fracr frac))
          ((fresh (fracfst fracrst)
                  (== frac (cons fracfst fracrst))
-                 (conde ((<o (build-num 16777215) frac)
-                         (drop-leastsig-bito fracrst fracr))
-                        ((<=o frac (build-num 16777215))
-                         (== fracr frac)))))))
-                   
+                 (conde ((same-lengtho (make-list 23 0) frac)
+                         (== fracr frac))
+                        ((drop-leastsig-bito fracrst fracr)))))))
+
+#|
+Determines if list is of same length
+|# 
+(define (same-lengtho lst1 lst2)
+  (conde ((== lst1 '())
+          (== lst2 '()))
+         ((fresh (f1 r1 f2 r2)
+                 (== lst1 (cons f1 r1))
+                 (== lst2 (cons f2 r2))
+                 (same-lengtho r1 r2)))))
+
 #|
 Shifts the exponent. 
 |# 
@@ -57,7 +69,9 @@ Shifts the exponent.
                  (pluso n-minus-1 '(1) n)
                  (shifto shifted-frac n-minus-1 result)
                  ))))
-
+#|
+Shifts exponent
+|# 
 (define (shift-expo man man-sum exp exp-sum)
   (conde ((== man '())
           (== man-sum '())
@@ -69,6 +83,16 @@ Shifts the exponent.
                  (== man (cons manfst manrst))
                  (== man-sum (cons man-sumfst man-sumrst))
                  (shift-expo manrst man-sumrst exp exp-sum)))))
+
+
+(define (adjust-expo man-sum exp exp-sum)
+  (conde ((<=o (build-num 33554431) man-sum)
+          (pluso '(1) exp exp-sum))
+         ((<o man-sum (build-num 33554431))
+          (== exp-sum exp))))
+          
+  
+  
 #|
 Shifts exponent for denormalized nums
 |# 
@@ -89,80 +113,26 @@ Negates sign
           (== nsign 0))
          ((== sign 0)
           (== nsign 1))))
-
 #|
-Detects if there is at least one bit set
+Determines resultant sign of C in an operation A+(-B) = C
 |#
-(define (anybito bit-lst)
-  (conde ((== bit-lst '(1)))
-         ((=/= bit-lst '(1)) ;Where we have at least 2 elements
-          (fresh (first-bit rest-lst)
-                 (== bit-lst (cons first-bit rest-lst))
-                 (conde ((== first-bit 0) ; need to recurse
-                         (anybito rest-lst)) 
-                        ((== first-bit 1))))))) ; we are done.
+(define (finalsigno sign1 sign2 expo1 expo2 rsign)
+  (conde ((<o expo1 expo2)
+          (== rsign sign2))
+         ((<=o expo2 expo1)
+          (== rsign sign1))))
 
 
 #|
-Checks if the bit list has exactly 22 bits.
-Can't think of a better way. ask lisa.
+Adding leading bit to mantissa.
 |#
-(define (has22-bitso lst)
-  (<=o lst '(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1))
-  (<o '(1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 ) lst))
-
-#|
-Detects any inf
-|#
-(define (info mkfp)
-  (conde ((posinfo mkfp))
-         ((neginfo mkfp))))
-
-#|
-Detects pos inf
-|#
-(define (posinfo mkfp)
-  (fresh (sign exp frac)
-         (== mkfp (list sign exp frac))
-         (== sign 0)
-         (== frac '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
-         (== exp '(1 1 1 1 1 1 1 1))))
-
-#|
-Detects neg inf
-|#
-(define (neginfo mkfp)
-  (fresh (sign exp frac)
-         (== mkfp (list sign exp frac))
-         (== sign 1)
-         (== frac '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
-         (== exp '(1 1 1 1 1 1 1 1))))
-
-#|
-Detects qNaN
-(technically works but its too slow; culprit hasn-bitso)
-|#
-(define (qNaNo mkfp)
-  (fresh (sign exp frac partial-frac)
-         (== mkfp (list sign exp frac))
-         (conde ((== sign 1)) ((== sign 0))) ; just to ensure we have a correct sign.
-         (== exp '(1 1 1 1 1 1 1 1))
-         (has22-bitso partial-frac);'(0 1 1 0 1) = 22
-         (appendo partial-frac '(1) frac))) 
-
-#|
-Detects sNaN
-(technically works but its too slow; culprit hasn-bitso)
-|#
-(define (sNaNo mkfp)
-  (fresh (sign exp frac partial-frac)
-         (== mkfp (list sign exp frac))
-         (conde ((== sign 1)) ((== sign 0))) ; just to ensure we have a correct sign.
-         (== exp '(1 1 1 1 1 1 1 1))
-         (appendo partial-frac '(0) frac)
-         (has22-bitso partial-frac)
-         (anybito partial-frac)))
-
+(define (addleadbito exp man r)
+  (conde ((zeroo exp)
+          (== r man))
+         ((poso exp)
+          (appendo man '(1) r))))
+  
+         
 ;(conde ((=lengtho man-sum man2)
 ;        (== exp2 exp-result))
 ;       ((>lengtho man-sum man2)
@@ -176,11 +146,11 @@ Detects sNaN
 
 
 (define (fp-pluso f1 f2 r)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
          (== f1 (list sign1 expo1 frac1))
          (== f2 (list sign2 expo2 frac2))
-         (conde ((<o expo2 expo1)
-                 (fp-pluso f2 f1 r))
+         (== r (list rsign rexpo rfrac))
+         (conde 
                 ((<=o expo1 expo2)
                  (conde
                   ((== sign1 sign2)
@@ -222,45 +192,35 @@ Detects sNaN
                                   ; return result
                                   ;(appendo frac-result '(1) man-sum)
                                   (== r (list sign1 exp-result frac-result))))))
+                   
 
                   ;when signs are opposite
+                  ;When C has the same sign as A (+)
+                  ;A+(-B) = C -> A = C + B
+                  ; fp-pluso (C, -B, A)
+                  ;When C has the same sign as B (-)
+                  ;A + (-B) = -C -> -B = -C + (-A)
+                  ;fp-pluso (C, -A, B)
                   ((=/= sign1 sign2)
-                   (conde ((== 0 sign2) ; (-a)+b
-                           (fresh (nres exp man sign nsign)
-                                  (fp-pluso f2 f1 nres) ; swap args
-                                  (== nres (list sign exp man))
-                                  (negsigno sign nsign)
-                                  (== r (list nsign exp man))))
-                          ((== 1 sign2) ; a+ (-b)
-                           ;keep frac-result as final return value
-                           ;check if denormalized
-                           (conde ( (== expo1 '())
-                                    (== expo2 '())
-                                    ;to do
-                                    )
-                                  ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
-    
-                                          (=/= expo2 '())
-                                          (pluso expo1 expo-diff expo2)
-                                          ;shift the frac of the SMALLER exponent
-                                          (shifto frac2 expo-diff shifted-frac2)
-                                          ; get mantissas
-                                          (appendo frac1 '(1) man1)
-                                          (appendo shifted-frac2 '(1) man2)
-                                          ; oleg number addition
-                                          (pluso man1 man2 man-sum)
-                                          ; exponent shift
-                                          (shift-expo man2 man-sum expo2 exp-result)
-                                          ;drop least-sig bit
-                                          (drop-leastsig-bito man-sum man-result) 
-                             
-                                          ;drop most-sig bit
-                                          (drop-mostsig-bito man-result frac-result)
-    
-                                          ; return result
-                                          (== r (list sign1 exp-result frac-result)))))))))
+                   (fresh (rsign newsign newf)
+                          (finalsigno sign1 sign2 expo1 expo2 rsign)
+                          (conde ((== sign1 0)
+                                  (== rsign 0)
+                                  (== newsign 1)
+                                  (== newf (list newsign expo2 frac2))
+                                  (fp-pluso r newf f1))
+                                 ((== sign2 1)
+                                  (== rsign 1)
+                                  (== newsign 1)
+                                  (== newf (list newsign expo1 frac1))
+                                  (fp-pluso r newf f2)))))
 
-                 ))))
+                  ))
+                ((<o expo2 expo1)
+                 (fp-pluso f2 f1 r))
+                   
+
+                 )))
 
 
 
