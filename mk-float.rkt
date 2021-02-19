@@ -4,6 +4,8 @@
 (require "numbers.rkt")
 (require "test-numbers.rkt")
 
+(provide fp-pluso)
+
 (define float-format '(sign
                        expo ; Oleg number
                        frac ; kind of Oleg number?
@@ -42,7 +44,7 @@ Drops least significant bit in the mantissa, where cap is 23 bits.
           (== fracr frac))
          ((fresh (fracfst fracrst)
                  (== frac (cons fracfst fracrst))
-                 (conde ((same-lengtho (make-list 23 0) frac)
+                 (conde ((same-lengtho (make-list 24 0) frac)
                          (== fracr frac))
                         ((drop-leastsig-bito fracrst fracr)))))))
 
@@ -145,11 +147,19 @@ Adding leading bit to mantissa.
 ; (1 1 1 1 1 1 1 1 1 1 1 0 0 1) - man-sum
 
 
+(define (frac-lengtho m)
+  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
+      (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
+   ))
+
 (define (fp-pluso f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
          (== f1 (list sign1 expo1 frac1))
+         (frac-lengtho frac1)
          (== f2 (list sign2 expo2 frac2))
+         (frac-lengtho frac2)
          (== r (list rsign rexpo rfrac))
+         (frac-lengtho rfrac)
          (conde 
                 ((<=o expo1 expo2)
                  (conde
