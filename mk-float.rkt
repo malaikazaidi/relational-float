@@ -28,9 +28,7 @@
 Drops most significant bit in the mantissa.
 |#
 (define (drop-mostsig-bito frac fracr)
-  (conde ((== frac '())
-          (== fracr frac))
-         ((fresh (frachead)
+  (conde ((fresh (frachead)
                  (conde ((appendo frachead '(0) frac))
                         ((appendo frachead '(1) frac)))
                  (== fracr frachead)))))
@@ -40,13 +38,17 @@ Drops least significant bit in the mantissa, where cap is 23 bits.
 |#
 
 (define (drop-leastsig-bito frac fracr)
-  (conde ((== frac '())
-          (== fracr frac))
-         ((fresh (fracfst fracrst)
-                 (== frac (cons fracfst fracrst))
-                 (conde ((same-lengtho (make-list 24 0) frac)
-                         (== fracr frac))
-                        ((drop-leastsig-bito fracrst fracr)))))))
+  (fresh (foo)
+    (frac-lengtho fracr)
+    (appendo foo fracr frac)))
+
+;  (conde ((== frac '())
+;          (== fracr frac))
+;         ((fresh (fracfst fracrst)
+;                 (== frac (cons fracfst fracrst))
+;                 (conde (
+;                         (== fracr frac))
+;                        ((drop-leastsig-bito fracrst fracr)))))))
 
 #|
 Determines if list is of same length
@@ -62,15 +64,26 @@ Determines if list is of same length
 #|
 Shifts the exponent. 
 |# 
-(define (shifto frac n result)
+(define (shifto-old frac n result)
   (conde ((zeroo n)
           (== frac result))
          ((poso n)
           (fresh (shifted-frac n-minus-1)
                  (== shifted-frac (cons 0 frac))
                  (pluso n-minus-1 '(1) n)
-                 (shifto shifted-frac n-minus-1 result)
+                 (shifto-old shifted-frac n-minus-1 result)
                  ))))
+
+(define (shifto frac expo1 expo2 result)
+  (conde ((== expo1 expo2)
+          (== frac result))
+         ((=/= expo1 expo2)
+          (fresh (shifted-frac expo+1)
+                 (== shifted-frac (cons 0 frac))
+                 (pluso expo1 '(1) expo+1)
+                 (shifto shifted-frac expo+1 expo2 result)
+                 ))))
+
 #|
 Shifts exponent
 |# 
@@ -123,8 +136,6 @@ Determines resultant sign of C in an operation A+(-B) = C
           (== rsign sign2))
          ((<=o expo2 expo1)
           (== rsign sign1))))
-
-
 #|
 Adding leading bit to mantissa.
 |#
@@ -133,7 +144,6 @@ Adding leading bit to mantissa.
           (== r man))
          ((poso exp)
           (appendo man '(1) r))))
-  
          
 ;(conde ((=lengtho man-sum man2)
 ;        (== exp2 exp-result))
@@ -161,49 +171,29 @@ Adding leading bit to mantissa.
          (== r (list rsign rexpo rfrac))
          (frac-lengtho rfrac)
          (conde 
-                ((<=o expo1 expo2)
-                 (conde
-                  ((== sign1 sign2)
-                   ;keep frac-result as final return value
-                   ;check if denormalized
-                   (conde ((fresh (man-sum shifted-exp man-result)
-                                  (== expo1 '())
-                                  (== expo2 '())
-                                  ; oleg number addition
-                                  (pluso frac1 frac2 man-sum)
-                                  ; exponent shift
-                                  (shift-expod man-sum expo2 shifted-exp)
-                                  (conde ((=/= shifted-exp '())
-                                          (drop-mostsig-bito man-sum man-result))
-                                         ((== shifted-exp '())
-                                          (== man-sum man-result)))
-                
-                                  (== r (list sign1 shifted-exp man-result))
-                                  ))
-                          ((fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result exp-result man-result)
-    
+            ((== sign1 sign2)
+              ;keep frac-result as final return value
+             ;check if denormalized
+             (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result man-result)
+                                  (== rsign sign1)
                                   (=/= expo2 '())
+                                   ; get mantissas
+                                  (appendo frac1 '(1) man1)
                                   (pluso expo1 expo-diff expo2)
                                   ;shift the frac of the SMALLER exponent
-                                  (shifto frac2 expo-diff shifted-frac2)
-                                  ; get mantissas
-                                  (appendo frac1 '(1) man1)
+                                  (shifto-old frac2 expo-diff shifted-frac2)
                                   (appendo shifted-frac2 '(1) man2)
-                                  ; oleg number addition
-                                  (pluso man1 man2 man-sum)
                                   ; exponent shift
-                                  (shift-expo man2 man-sum expo2 exp-result)
-                                  ;drop least-sig bit
-                                  (drop-leastsig-bito man-sum man-result) 
-                             
+                                  (shift-expo man2 man-sum expo2 rexpo)
                                   ;drop most-sig bit
-                                  (drop-mostsig-bito man-result frac-result)
-    
+                                  (appendo man-result '(1) man-sum); (drop-mostsig-bito man-sum man-result)
+                                  ;drop least-sig bit
+                                  (drop-leastsig-bito man-result rfrac) 
+                                   ; oleg number addition
+                                  (pluso man1 man2 man-sum)
                                   ; return result
                                   ;(appendo frac-result '(1) man-sum)
-                                  (== r (list sign1 exp-result frac-result))))))
-                   
-
+                                  ))
                   ;when signs are opposite
                   ;When C has the same sign as A (+)
                   ;A+(-B) = C -> A = C + B
@@ -225,12 +215,7 @@ Adding leading bit to mantissa.
                                   (== newf (list newsign expo1 frac1))
                                   (fp-pluso r newf f2)))))
 
-                  ))
-                ((<o expo2 expo1)
-                 (fp-pluso f2 f1 r))
-                   
-
-                 )))
+                  )))
 
 
 
