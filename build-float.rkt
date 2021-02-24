@@ -1,69 +1,14 @@
 #lang racket
 
-(require "special-values.rkt")
-
 (provide build-truncated-float)
 
-#|
-(truncate-pad bitlist n)
-  bitlist: list? a list of 0's and 1's
-  n: integer? and positive? the number of bits in the output list.
+(define SMALLEST_PRECISION_EXP 149)
+(define EXP_SHIFT 127)
+(define HIDDEN_BIT_INDEX 24)
+(define SMALLEST_NORMAL_MAGNITUDE (expt 2 -126))
 
-  Returns a truncated bitlist with n bits where n of the most significant bits are kept.
-  If (< (length bitlist) n) then the bitlist will be padded with 0's on the right. 
-|#
-(define (truncate-pad bitlist n)
-  (let* ([bitlist-length (length bitlist)])
-    (cond
-      [(> bitlist-length n) (list-tail bitlist (- bitlist-length n))]
-      [(< bitlist-length n) (padright bitlist 0 (- n bitlist-length))]
-      [else bitlist])))
-
-#|
-(drop-leading-bit bitlist)
-  bitlist: list? a list of 0's and 1's
-
- Returns a new bitlist with the same elements but without the last element. 
-|#
-(define (drop-leading-bit bitlist) (take bitlist (- (length bitlist) 1)))
-
-#|
-(truncate bitlist n)
-  bitlist: list? a list of 0's and 1's
-  n: integer? and positive? the number of bits in the output list.
-
-  Returns a new bitlist with at most n bits. The most significant bits are preserved.
-|#
-(define (truncate bitlist n)
-  (let* ([bitlist-length (length bitlist)])
-    (cond
-      [(> bitlist-length n) (list-tail bitlist (- bitlist-length n))]
-      [else bitlist])))
-
-#|
-(padleft bitlist bit n)
-  bitlist: list? a list of 0's and 1's
-  bit: 0 or 1
-  n: integer? and positive? the number of bits we are padding the left of the list with.
-
-  Returns a new bit list padded to the left with n bits specified by bit.
-|#
-(define/match (padleft bitlist bit n)
-  [(bitlist _ 0)   bitlist]
-  [(bitlist bit n) (padleft (cons bit bitlist) bit (- n 1))])
-
-#|
-(padright bitlist bit n)
-  bitlist: list? a list of 0's and 1's
-  bit: 0 or 1
-  n: integer? and (not negative?) the number of bits we are padding the end of the list with.
-
-  Returns a new bitlist padded to the right with n bits specified by bit.
-|#
-(define (padright bitlist bit n)
-  (let* ([n-bits (make-list n bit)])
-    (append bitlist n-bits))
-)
+; These are set to be constant so when we implement a variable precision 
+; we can see how to modify the code easier. 
 
 #|
 (int-to-bitlist z)
@@ -93,160 +38,128 @@
               [else         (int-to-bitlist-helper q (cons r acc))]))]))
 
 #|
-(get-mantissa-bit fractional-part)
-  fractional-part: real? and positive? and less than 1.
+(decompose-real r)
+  r: A real number
 
-  Returns the pair (bit . product) where bit is 0 if (< product 1) and 1 otherwise.
-  product = {(* 2 fractional-part)}, {x} is the fractional part of x.
+  Return a three element list; (sign, int, frac) where:
+    - sign: 0 if non-negative 1 if negative
+    - int: The floor of the absolute value of r. (-4.5 -> 4)
+    - frac: The fractional part of r. note: 0 <= frac < 1
 |#
-(define (get-mantissa-bit fractional-part)
-  (let* ([product (* 2 fractional-part)])
-    (cond
-      [(< product 1) (cons 0 product)]
-      [else (cons 1 (- product 1))])))
+(define (decompose-real r) 
+  (let*
+        ([sign  (if (< r 0) 1 0)]
+         [abs-r (abs r)]
+         [int   (floor abs-r)]
+         [frac  (- abs-r int)])
+        
+        (list sign int frac)))
 
 #|
-(advance-to-first-signifcant-bit fractional-part)
-  fractional-part: real? and positive? and less than 1.
+(fractional-bitlist r nbits)
+  r: A real number less than 1 and non-negative
+  nbits: The total number of bits to generate.
 
-  Returns i, where i is the number of doublings of fractional-part that occured
-  until the next doubling would be larger than 1.
+  Return, pair (bitlst . zeros) where
+    - bitlist is the representation of r in bits. 
+    - zeros is the number of leading zeros before the first bit set to 1 in the representation of r.
 |#
-(define (count-leading-zeros fractional-part)
-  (count-leading-zeros-helper fractional-part 0))
+(define (fractional-bitlist r nbits) 
+  (let* 
+    ([bitlst-zeros-flag (fractional-bitlist-helper r (list '() nbits 0 #f))]
+     [bitlist           (first bitlst-zeros-flag)]
+     [zeros             (third bitlst-zeros-flag)]) 
   
+    (cons bitlist zeros)))
 
 #|
-(count-leading-zeros-helper fractional-part iter)
-  fractional-part: real? and positive? and less than 1.
-  iter:  The number of doublings performed before being larger than 1.
-
-  Returns the pair i where,
-    - 0 <= i <= 126, the min{126, number-of-leading zero's}
-
-  |#
-(define (count-leading-zeros-helper fractional-part iter)
-  (let* ([doubled (* 2 fractional-part)])
-            (cond
-              [(> iter 125)     iter] ; this catches 0 / denorms/ underflow.
-              [(< doubled 1)    (count-leading-zeros-helper doubled (+ 1 iter)) ]
-              [else             iter])))
-  
-#|
-(fractional-to-mantissa fractional-part number-of-bits)
-  fractional-part: real? and positive? and less than 1.
-  number-of-bits:  integer? and (not negative?)
-
-  Returns a pair (mantissa . n-leading-zeros) where mantissa is a representation of
-  the significand of fractional-part represented as a bitlist of length
-  number-of-bits, and n-leading-zeros is a integer representing the number of
-  leading zeros before the first significant bit. 
+(fractional-bitlist-helper r nbits acc)
+  A helper function that is tail recursive.
+  Returns (bitlst nbits zeros flag)
+    - bitlist is the representation of r in bits.
+    - nbits is an internal intger used to count the number of bits created. 
+    - zeros is the number of leading zeros before the first bit set to 1 in the representation of r.
+    - flag is an internal flag that is used to determine if a 1 has been found.
 |#
-(define (fractional-to-mantissa fractional-part number-of-bits)
-  (let* ([n-leading-zeros          (count-leading-zeros fractional-part)]; The number of leading zeros
-         [advanced-fractional-part (if (< n-leading-zeros 23)
-                                       ; This is the case when we don't need to advance the mantissa since it has less than 23 leading zeros
-                                       fractional-part
-                                       ; We have 23 or more leading zeros so we must advance it.
-                                       (* fractional-part (expt 2 n-leading-zeros)))]
+(define/match (fractional-bitlist-helper r acc)
+  [(r (list bitlist 0 zeros found-one)) (list bitlist 0 zeros found-one)]
+  [(r (list bitlist nbits zeros found-one))
+     (let* ([double-r (* 2 r)]
+            [next-bit (if (< double-r 1) 0 1)]
+            [next-r   (if (equal? next-bit 1) (- double-r 1) double-r)]
+            [next-acc (next-fractional-acc bitlist nbits zeros found-one next-bit)])
 
-         ; a number is denormal if it is preceeded by at least 126 zeros and the remaining portion is not zero.
-         
-         ) (cons
-            (fractional-to-mantissa-helper advanced-fractional-part number-of-bits '()) ;generates the mantissa
-            n-leading-zeros)))
-             
-#|
-(fractional-to-mantissa-helper fractional-part number-of-bits acc)
-  fractional-part: real? and positive? and less than 1.
-  number-of-bits:  integer? and (not negative?)
-  acc:             An accumulator for the mantissa
-
-  Returns a mantissa. A mantissa is a representation of the significand of
-  fractional-part represented as a bitlist of length number-of-bits. 
-|#
-(define (fractional-to-mantissa-helper fractional-part number-of-bits acc)
-  (cond
-    [(< number-of-bits 1) acc]
-    [else (let* ([get-mantissa-bit-pair (get-mantissa-bit fractional-part)]
-                 [bit                   (car get-mantissa-bit-pair)]
-                 [next-fractional-part  (cdr get-mantissa-bit-pair)]
-                 [next-number-of-bits   (- number-of-bits 1)]
-                 [next-acc              (cons bit acc)])
-            (fractional-to-mantissa-helper next-fractional-part next-number-of-bits next-acc))]))
+            (fractional-bitlist-helper next-r next-acc))])
 
 #|
-(build-mantissa fractional-mantissa binary-integer denormal?)
-  fractional-mantissa: The bitlist obtained after calling (fractional-to-mantissa)
-  binary-integer:      The bitlist representation of the integer part of the floating point number we are building.
-  denormal?:           A flag indicating if the mantissa should be interpreted as denormal.
+(next-fractional-acc bitlist found-one acc-zeros next-bit)
 
-  Returns the final stored mantissa.
+  Creates the next accumulator for the fractional-bitlist-helper function.
 |#
-(define (build-mantissa fractional-mantissa n-leading-mantissa-zeros binary-integer)
-  (let* ([no-integer?             (equal? '() binary-integer)]
-         [no-fractional-mantissa? (equal? '() fractional-mantissa)]
-         [denormal?               (and no-integer? (>= n-leading-mantissa-zeros 126))]
-         [mantissa                (append fractional-mantissa (truncate binary-integer 23))])
-    (cond
-      [denormal?               (truncate mantissa 23)]; drop the last significant bit.
-      [no-integer?             (drop-leading-bit mantissa)]; not denormal thus we must drop a leading 1.
-      [no-fractional-mantissa? mantissa]; Do nothing since we already truncated the integer.
-      [else                    (drop-leading-bit mantissa)])))
+(define (next-fractional-acc bitlist nbits zeros found-one next-bit)
+  (let* (; If we have already found a 1 start decreasing n-bits
+         ; Or, if we are about to fall off precision (leading zeros == (149 - nbits)) 
+         ;
+         [next-found-one (or found-one 
+                             (equal? next-bit 1) 
+                             (equal? (- SMALLEST_PRECISION_EXP nbits) zeros))]
+
+         [next-bitlist   (if next-found-one 
+                             (cons next-bit bitlist)
+                             bitlist)]
+                           
+         [next-nbits     (if next-found-one  
+                             (- nbits 1)
+                             nbits)]
+
+         [next-zeros     (if next-found-one  
+                             zeros
+                             (+ 1 zeros))])
+       
+        (list next-bitlist next-nbits next-zeros next-found-one)))
 
 #|
-(build-exponent binary-integer-length n-leading-zeros)
-  binary-integer-length: positive? integer? The number of bits it takes to represent the integer portion of the float.
-  n-leading-zeros: positive? integer?
+(calculate-fractional-nbits bitlength)
+  bitlength: The length of the integer part of r in bits which was passed into build-truncated-float.
+             pos?
+  Returns the number of bits required from the fractional part of r to create a mantissa.
 |#
-(define/match (build-exponent binary-integer-length n-leading-zeros)
-  [(0 126) '(0 0 0 0 0 0 0 0)];denormal case
-  
-  [(0 n-leading-zeros) (let* ([biased-exponent (+ 127 (- (+ n-leading-zeros 1)))])
-                               (truncate-pad (int-to-bitlist biased-exponent) 8))]; less than 1 case
+(define (calculate-fractional-nbits bitlength)
+  (max 0 (- HIDDEN_BIT_INDEX bitlength))); 24 to account for the hidden bit
 
-  
-  [(binary-integer-length _) (let* ([biased-exponent (+ 127 (- binary-integer-length 1))]); other
-                               (truncate-pad (int-to-bitlist biased-exponent) 8))])
+(define/match (calculate-shifted-exponent-n integer-bitlength leading-zeros denorm?)
+  [(_ _ #t) 0]
+  [(0 leading-zeros #f) (- EXP_SHIFT 1 leading-zeros)]; for single-floating point (EXP_SHIFT - 1)=126
+  [(integer-bitlength _ #f) (+ EXP_SHIFT -1 integer-bitlength)])
+
 
 #|
 (build-truncated-float r)
   r: A racket float.
 
-  Returns a 32-bit MKFP representation of the floating point number r.
+  Returns a MKFP representation of the floating point number r.
 |#
-(define (build-truncated-float r)
-  (let* ([sign-bit                  (if (< r 0) 1 0)]
-         [abs-r                     (abs r)]
-         [integer-part              (floor abs-r)]; int(r) = floor(|r|)
-         [binary-integer            (int-to-bitlist integer-part)] ;in little-edian format,
-         [binary-integer-length     (length binary-integer)]
-          
-         ; We keep an extra bit since we have to drop the leading one in some cases.
-         ; If the number is denormal we drop the least significant bit.
-         [remaining-mantissa-length (- 24 binary-integer-length)] 
-         [fractional-part           (- abs-r integer-part)]; {r} = |r|- floor(|r|)
+(define (build-truncated-float r) 
+    (let* 
+      ([sign-int-frac     (decompose-real r)]
+       [sign              (first sign-int-frac)]
+       [integer-part      (second sign-int-frac)]
+       [fractional-part   (third sign-int-frac)]
+       [denorm?           (< fractional-part SMALLEST_NORMAL_MAGNITUDE)]
 
-         
-         [fractional-mantissa-pair  (fractional-to-mantissa fractional-part remaining-mantissa-length)]
-         ;decompose the pair
-         ; This mantissa may still be need to be modified if the integer part is non-zero
-         [fractional-mantissa       (car fractional-mantissa-pair)]
-         [n-leading-mantissa-zeros  (cdr fractional-mantissa-pair)]
+       [binary-integer           (int-to-bitlist integer-part)]
+       [integer-bitlength        (length binary-integer)]
+       [required-fractional-bits (calculate-fractional-nbits integer-bitlength)]
+       
+       [frac-zeros          (fractional-bitlist fractional-part required-fractional-bits)]
+       [fractional-mantissa (car frac-zeros)]
+       [leading-zeros       (cdr frac-zeros)]
+       [shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength leading-zeros denorm?)]
 
+       [exponent (int-to-bitlist shifted-exponent-n)]
+       [mantissa '()]) 
 
-         ; finish building the mantissa
-         ; if the number is denormal the mantissa remains unchanged.
-         ; If the number is normal we must drop the leading 1.
-         [mantissa  (build-mantissa fractional-mantissa n-leading-mantissa-zeros binary-integer)]
-         
-         
-         ; build the exponent
-         [exponent                  (build-exponent binary-integer-length n-leading-mantissa-zeros)]; this is the final stored exponent
-         
-         
-         
-        ) (append (cons sign-bit (append exponent mantissa)))))
+      (list sign exponent mantissa))) 
 
 
 
