@@ -127,11 +127,19 @@
 (define (calculate-fractional-nbits bitlength)
   (max 0 (- HIDDEN_BIT_INDEX bitlength))); 24 to account for the hidden bit
 
-(define/match (calculate-shifted-exponent-n integer-bitlength leading-zeros denorm?)
-  [(_ _ #t) 0]
-  [(0 leading-zeros #f) (- EXP_SHIFT 1 leading-zeros)]; for single-floating point (EXP_SHIFT - 1)=126
-  [(integer-bitlength _ #f) (+ EXP_SHIFT -1 integer-bitlength)])
+#|
+(calculate-shifted-exponent-n integer-bitlength leading-zeros)
+  integer-bitlength: pos? int?
+  leading-zeros: pos? int?
 
+  Calculates the shifted exponent for the mkfp number.
+|#
+(define/match (calculate-shifted-exponent-n integer-bitlength leading-zeros)
+  [(0 leading-zeros)      (- EXP_SHIFT 1 leading-zeros)]; for single-floating point (EXP_SHIFT - 1)=126
+  [(integer-bitlength _ ) (+ EXP_SHIFT -1 integer-bitlength)])
+
+
+(define (build-mantissa binary-integer fractional-mantissa leading-zeros) (void))
 
 #|
 (build-truncated-float r)
@@ -145,7 +153,6 @@
        [sign              (first sign-int-frac)]
        [integer-part      (second sign-int-frac)]
        [fractional-part   (third sign-int-frac)]
-       [denorm?           (< fractional-part SMALLEST_NORMAL_MAGNITUDE)]
 
        [binary-integer           (int-to-bitlist integer-part)]
        [integer-bitlength        (length binary-integer)]
@@ -154,7 +161,13 @@
        [frac-zeros          (fractional-bitlist fractional-part required-fractional-bits)]
        [fractional-mantissa (car frac-zeros)]
        [leading-zeros       (cdr frac-zeros)]
-       [shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength leading-zeros denorm?)]
+
+       ; Check if denormalized to adjust leading zeros. With denorm 1 leading zero will not be accounted for.
+       [denorm? (and (equal? (last fractional-mantissa) 0) 
+                     (equal? leading-zeros (- SMALLEST_PRECISION_EXP HIDDEN_BIT_INDEX)))]
+      
+       [adjusted-leading-zeros (if denorm? (+ leading-zeros 1) leading-zeros)]
+       [shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength adjusted-leading-zeros)]
 
        [exponent (int-to-bitlist shifted-exponent-n)]
        [mantissa '()]) 
