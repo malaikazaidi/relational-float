@@ -3,16 +3,6 @@
 (provide zero one smallnorm largenorm seventytwo neg421 negseventy fortytwo sixty
          p2049 three n1020.625 n45.125 p12.8 p12.5 n45.2 p0.636018991
          psmallestd plargestd underf p2^23 pinf ninf qnan snan four negone negfour)
-
-
-(define/match (build-exp num)
-  [(0) (list 0 0 0 0 0 0 0 0)]
-  [(num) (let* ([bitlist (build-num num)]
-                [len (length bitlist)]
-                [numoff (- 8 len)] 
-                )
-           (if (< len 8)
-               (append bitlist (make-list numoff 0)) bitlist))])
                 
 
 ;defined some fp numbers for testing
