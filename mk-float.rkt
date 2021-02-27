@@ -36,17 +36,9 @@ Drops least significant bit in the mantissa, where cap is 23 bits.
 |#
 
 (define (drop-leastsig-bito frac fracr)
-  (fresh (foo)
-    (frac-lengtho fracr)
-    (appendo foo fracr frac)))
-
-;  (conde ((== frac '())
-;          (== fracr frac))
-;         ((fresh (fracfst fracrst)
-;                 (== frac (cons fracfst fracrst))
-;                 (conde (
-;                         (== fracr frac))
-;                        ((drop-leastsig-bito fracrst fracr)))))))
+  (fresh (bit)
+         (frac-lengtho fracr)
+         (appendo bit fracr frac)))
 
 #|
 Determines if list is of same length
@@ -62,25 +54,16 @@ Determines if list is of same length
 #|
 Shifts the exponent. 
 |# 
-(define (shifto-old frac n result)
+(define (shifto frac n result)
   (conde ((zeroo n)
           (== frac result))
          ((poso n)
           (fresh (shifted-frac n-minus-1)
                  (== shifted-frac (cons 0 frac))
                  (pluso n-minus-1 '(1) n)
-                 (shifto-old shifted-frac n-minus-1 result)
+                 (shifto shifted-frac n-minus-1 result)
                  ))))
 
-(define (shifto frac expo1 expo2 result)
-  (conde ((== expo1 expo2)
-          (== frac result))
-         ((=/= expo1 expo2)
-          (fresh (shifted-frac expo+1)
-                 (== shifted-frac (cons 0 frac))
-                 (pluso expo1 '(1) expo+1)
-                 (shifto shifted-frac expo+1 expo2 result)
-                 ))))
 
 #|
 Shifts exponent
@@ -96,14 +79,6 @@ Shifts exponent
                  (== man (cons manfst manrst))
                  (== man-sum (cons man-sumfst man-sumrst))
                  (shift-expo manrst man-sumrst exp exp-sum)))))
-
-
-(define (adjust-expo man-sum exp exp-sum)
-  (conde ((<=o (build-num 33554431) man-sum)
-          (pluso '(1) exp exp-sum))
-         ((<o man-sum (build-num 33554431))
-          (== exp-sum exp))))
-          
   
   
 #|
@@ -130,12 +105,11 @@ Negates sign
 Determines resultant sign of C in an operation A+(-B) = C
 |#
 (define (finalsigno sign1 sign2 expo1 expo2 frac1 frac2 rsign)
-  (conde ((<o expo1 expo2)
-          ;(<o frac1 frac2)
-          (== rsign sign2))
-         ((<=o expo2 expo1)
-          ;(<=o frac2 frac1)
-          (== rsign sign1))))
+  (conde ((== rsign sign2)
+          (<o expo1 expo2))
+         ((== rsign sign1)
+          (<=o expo2 expo1)
+          )))
 #|
 Adding leading bit to mantissa.
 |#
@@ -145,12 +119,6 @@ Adding leading bit to mantissa.
          ((poso exp)
           (appendo man '(1) r))))
          
-;(conde ((=lengtho man-sum man2)
-;        (== exp2 exp-result))
-;       ((>lengtho man-sum man2)
-;        (== exp2 exp-result)))
-; rounding?
-
 
 ; (0 1 0 1 0 1 0 1 0 1 0 1 1)   - man2
 ; (1 0 1 0 1 0 1 0 1 0 1 1)     - man1
@@ -159,8 +127,8 @@ Adding leading bit to mantissa.
 
 (define (frac-lengtho m)
   (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
-      (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
-   ))
+         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
+         ))
 
 (define (fp-pluso f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
@@ -171,61 +139,57 @@ Adding leading bit to mantissa.
          (== r (list rsign rexpo rfrac))
          (frac-lengtho rfrac)
          (conde 
-            ((== sign1 sign2)
-              ;keep frac-result as final return value
-             ;check if denormalized
-             (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result man-result)
-                                  (== rsign sign1)
-                                  (=/= expo2 '())
-                                   ; get mantissas
-                                  (appendo frac1 '(1) man1)
-                                  (pluso expo1 expo-diff expo2)
-                                  ;shift the frac of the SMALLER exponent
-                                  (shifto-old frac2 expo-diff shifted-frac2)
-                                  (appendo shifted-frac2 '(1) man2)
-                                  ; exponent shift
-                                  (shift-expo man2 man-sum expo2 rexpo)
-                                  ;drop most-sig bit
-                                  (appendo man-result '(1) man-sum); (drop-mostsig-bito man-sum man-result)
-                                  ;drop least-sig bit
-                                  (drop-leastsig-bito man-result rfrac) 
-                                   ; oleg number addition
-                                  (pluso man1 man2 man-sum)
-                                  ; return result
-                                  ;(appendo frac-result '(1) man-sum)
-                                  ))
-                  ;when signs are opposite
-                  ;When C has the same sign as A (+)
-                  ;A+(-B) = C -> A = C + B
-                  ; fp-pluso (-B, C, A)
-                  ;When C has the same sign as B (-)
-                  ;A + (-B) = -C -> -B = -C + (-A)
-                  ;fp-pluso (C, -A, B)
-                  ; 3 + (-4) = R
-                  ; 3 = R + 4
-                  ; fp-pluso (-(-4), R, 42)
-                  ((=/= sign1 sign2)
-                   (fresh (resign newf newsign)
-                          (finalsigno sign1 sign2 expo1 expo2 frac1 frac2 resign)
-                          (conde ((== resign sign1 )
-                                  (negsigno sign2 newsign)
-                                  (== newf (list newsign expo2 frac2))
-                                  (fp-pluso newf r f1))
-                                 ((== resign sign2)
-                                  (negsigno sign1 newsign)
-                                  (== newf (list newsign expo1 frac1))
-                                  (fp-pluso newf r f2)))))
+          ((== sign1 sign2)
+           (=/= expo2 '())
+           ;keep frac-result as final return value
+           (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result man-result)
+                  (== rsign sign1)
+                  ; get mantissas
+                  (appendo frac1 '(1) man1)
+                  (pluso expo1 expo-diff expo2)
+                  
+                  ;shift the frac of the SMALLER exponent
+                  (shifto frac2 expo-diff shifted-frac2)
+                                  
+                  ; exponent shift
+                  (shift-expo man2 man-sum expo2 rexpo)
+                  (appendo shifted-frac2 '(1) man2)
+                                  
+                  ;drop most-sig bit
+                  (appendo man-result '(1) man-sum)
+                                  
+                  ;drop least-sig bit
+                  (drop-leastsig-bito man-result rfrac)
+                                  
+                  ; oleg number addition
+                  (pluso man1 man2 man-sum)
+                  ))
 
-                  )))
+          ((== sign1 sign2)
+           (=/= expo1 expo2)
+           (fp-pluso f2 f1 r))
 
-(define (fp-multo f1 f2 r)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
-         (== f1 (list sign1 expo1 frac1))
-         (frac-lengtho frac1)
-         (== f2 (list sign2 expo2 frac2))
-         (frac-lengtho frac2)
-         (== r (list rsign rexpo rfrac))
-         (frac-lengtho rfrac))
-  
-  )
+        
+          ;when signs are opposite
+          ;When C has the same sign as A (+)
+          ;A+(-B) = C -> A = C + B
+          ; fp-pluso (-B, C, A)
+          ;When C has the same sign as B (-)
+          ;A + (-B) = -C -> -B = -C + (-A)
+          ;fp-pluso (C, -A, B)
+          ((=/= sign1 sign2)
+           (fresh (resign newf newsign)
+                  (finalsigno sign1 sign2 expo1 expo2 frac1 frac2 resign)
+                  (conde ((== resign sign1)
+                          (negsigno sign2 newsign)
+                          (== newf (list newsign expo2 frac2))
+                          (fp-pluso newf r f1))
+                         ((== resign sign2)
+                          (negsigno sign1 newsign)
+                          (== newf (list newsign expo1 frac1))
+                          (fp-pluso newf r f2)))))
+
+
+          )))
+
 
