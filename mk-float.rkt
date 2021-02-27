@@ -3,6 +3,9 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt")
+(provide fp-pluso)
+
+(define BIAS (build-num 127))
 
 (define float-format '(sign
                        expo ; Oleg number
@@ -118,18 +121,25 @@ Adding leading bit to mantissa.
           (== r man))
          ((poso exp)
           (appendo man '(1) r))))
-         
-
-; (0 1 0 1 0 1 0 1 0 1 0 1 1)   - man2
-; (1 0 1 0 1 0 1 0 1 0 1 1)     - man1
-; (1 1 1 1 1 1 1 1 1 1 1 0 0 1) - man-sum
-
 
 (define (frac-lengtho m)
   (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
          (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
          ))
 
+#|
+Adds 2 exponents and subtracts bias (127)
+|#
+(define (shifted-pluso expo1 expo2 rexpo)
+  (fresh (exposum)
+         (pluso expo1 expo2 exposum)
+         (pluso rexpo BIAS exposum)
+         )
+  )
+
+#|
+Floating-Point Addition
+|#
 (define (fp-pluso f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
          (== f1 (list sign1 expo1 frac1))
@@ -140,7 +150,6 @@ Adding leading bit to mantissa.
          (frac-lengtho rfrac)
          (conde 
           ((== sign1 sign2)
-           (=/= expo2 '())
            ;keep frac-result as final return value
            (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result man-result)
                   (== rsign sign1)
@@ -168,7 +177,6 @@ Adding leading bit to mantissa.
           ((== sign1 sign2)
            (=/= expo1 expo2)
            (fp-pluso f2 f1 r))
-
         
           ;when signs are opposite
           ;When C has the same sign as A (+)
@@ -179,7 +187,7 @@ Adding leading bit to mantissa.
           ;fp-pluso (C, -A, B)
           ((=/= sign1 sign2)
            (fresh (resign newf newsign)
-                  (finalsigno sign1 sign2 expo1 expo2 frac1 frac2 resign)
+                  ;(finalsigno sign1 sign2 expo1 expo2 frac1 frac2 resign)
                   (conde ((== resign sign1)
                           (negsigno sign2 newsign)
                           (== newf (list newsign expo2 frac2))
@@ -188,8 +196,22 @@ Adding leading bit to mantissa.
                           (negsigno sign1 newsign)
                           (== newf (list newsign expo1 frac1))
                           (fp-pluso newf r f2)))))
-
-
           )))
 
-
+(define (fp-multo f1 f2 r)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo)
+         (== f1 (list sign1 expo1 frac1))
+         (frac-lengtho frac1)
+         (== f2 (list sign2 expo2 frac2))
+         (frac-lengtho frac2)
+         (== r (list rsign rexpo rfrac))
+         (frac-lengtho rfrac)
+         
+         (conde 
+          ((== sign1 sign2)
+           (== rsign 0))
+          ((=/= sign1 sign2)
+           (== rsign 1))
+          (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
+          
+          )))
