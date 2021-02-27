@@ -138,8 +138,29 @@
   [(0 leading-zeros)      (- EXP_SHIFT 1 leading-zeros)]; for single-floating point (EXP_SHIFT - 1)=126
   [(integer-bitlength _ ) (+ EXP_SHIFT -1 integer-bitlength)])
 
+#|
+(build-mantissa binary-integer fractional-mantissa leading-zeros)
+  binary-integer: A binary integer with no leading zeros and in little-endian format.
+  fractional-mantissa: A 24 bit mantissa
+  leading-zeros: The number of zeros preceeding the bits in the fractional-mantissa.
 
-(define (build-mantissa binary-integer fractional-mantissa leading-zeros) (void))
+  Returns the complete mantissa after droping the hidden bit.
+|#
+(define/match (build-mantissa binary-integer fractional-mantissa leading-zeros denorm?) 
+  [('() fractional-mantissa _ #t)            (dropf-right fractional-mantissa zero?)] ; drop the leading zeros.
+  [('() fractional-mantissa _ #f)            (drop-right fractional-mantissa 1)] ; drop the leading 1
+  [(binary-integer fractional-mantissa leading-zeros _) 
+    (let* ([int-length         (length binary-integer)]; The bit length of the integer
+           [remaining-bits     (max 0 (- HIDDEN_BIT_INDEX int-length))]; Total number of bits we can take.
+           [zero-bits          (min remaining-bits leading-zeros)]; The number of zeros to add.
+
+           [mantissa-bits      (max 0 (- remaining-bits zero-bits ))]; Number of bits from fractional mantissa we keep.
+
+           [with-zeros         (drop-right (append (make-list zero-bits 0) binary-integer) 1)]
+           [truncated-mantissa (take-right fractional-mantissa mantissa-bits)])
+           
+           (append truncated-mantissa with-zeros))])
+
 
 #|
 (build-truncated-float r)
@@ -164,13 +185,14 @@
 
        ; Check if denormalized to adjust leading zeros. With denorm 1 leading zero will not be accounted for.
        [denorm? (and (equal? (last fractional-mantissa) 0) 
-                     (equal? leading-zeros (- SMALLEST_PRECISION_EXP HIDDEN_BIT_INDEX)))]
+                     (equal? leading-zeros (- SMALLEST_PRECISION_EXP HIDDEN_BIT_INDEX)); 
+                     (equal? integer-bitlength 0))]
       
        [adjusted-leading-zeros (if denorm? (+ leading-zeros 1) leading-zeros)]
        [shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength adjusted-leading-zeros)]
 
        [exponent (int-to-bitlist shifted-exponent-n)]
-       [mantissa '()]) 
+       [mantissa (build-mantissa binary-integer fractional-mantissa adjusted-leading-zeros denorm?)]) 
 
       (list sign exponent mantissa))) 
 

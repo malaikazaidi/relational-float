@@ -39,7 +39,7 @@
 (define psmallestd `(0 ,(build-num 0) (1)))
 (define plargestd `(0 ,(build-num 0) ,(make-list 23 1))); 2^-126 * (1-2^(-23))
 (define underf `(0 ,(build-num 103) ,(make-list 23 0) ))
-(define p2^23 `(0 ,(build-num 104) ,(make-list 23 0)));-23
+(define p2^23 `(0 ,(build-num 104) ,(make-list 23 0)))
 (define pinf `(0 (1 1 1 1 1 1 1 1) ,(make-list 23 0)))
 (define ninf `(1 (1 1 1 1 1 1 1 1) ,(make-list 23 0)))
 (define qnan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1))); Only most sig bit is important for distinguishing nans
