@@ -189,8 +189,27 @@ Floating-Point Addition
                           (fp-pluso newf r f2)))))
           )))
 
+(define (long-multo man1 man2 manr acc)
+  (conde 
+    ((== man2 '())
+     (== acc manr))
+
+    ((=/= man2 '())
+     (fresh (bit man2-rest shifted-man acc^) 
+
+       (== shifted-man (cons 0 man1))  
+
+       (== man2 (cons bit man2-rest))
+       (conde
+         ((== bit 0)
+          (== acc acc^))
+         ((== bit 1)
+          (pluso acc man1 acc^)))
+
+       (long-multo shifted-man man2-rest manr acc^)))))
+
 (define (fp-multo f1 f2 r)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo man1 man2 manr pre-fracr)
          (== f1 (list sign1 expo1 frac1))
          (frac-lengtho frac1)
          (== f2 (list sign2 expo2 frac2))
@@ -203,6 +222,16 @@ Floating-Point Addition
            (== rsign 0))
           ((=/= sign1 sign2)
            (== rsign 1))
-          (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
-          
-          )))
+          )
+
+         (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
+         (== pre-rexpo rexpo); Not correct but used for testing other functionality.
+
+         ; add leading ones
+         (appendo frac1 '(1) man1)
+         (appendo frac2 '(1) man2)
+         (appendo pre-fracr '(1) manr)
+         (drop-leastsig-bito pre-fracr rfrac)
+
+         (long-multo man1 man2 manr '())
+         ))
