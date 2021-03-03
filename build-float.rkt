@@ -2,6 +2,8 @@
 
 (provide build-truncated-float)
 
+(define SINGLE_P 23); + 1 to include hidden bit.
+
 (define SMALLEST_PRECISION_EXP 149)
 (define EXP_SHIFT 127)
 (define HIDDEN_BIT_INDEX 24)
@@ -11,31 +13,113 @@
 ; we can see how to modify the code easier. 
 
 #|
-(int-to-bitlist z)
-  z: integer? and positive?
+(build-intbitlist z p)
+  z: The integer being converted to a magnitude bitlist.
+  p: The precision of the bitlist.
 
-  Returns a list of bits with no leading 0's that represent z in binary.
-  Note that the list is in little-endian format, i.e. the least significant bit is first.
-  Note that z must be non-negative.
+  Returns a pair (bitlist . exp)
+  bitlist:
+    - A bitlist representing the most significant bits of z using only p degrees of precision.
+    - 0 <= (length bitlist) <= p
+  exp:
+    - The exponent of the most significant bit.
 |#
-(define (int-to-bitlist z) (int-to-bitlist-helper z '()))
+(define (build-intbitlist z p) (build-intbitlist-helper z p '() -1))
+
+(define/match (build-intbitlist-helper z p bitlist expo)
+  [(z _ bitlist expo) #:when (= z 0) (cons (reverse bitlist) expo)]
+  [(z p bitlist expo) (let* ([pair (intbit-generator z)]
+                             [residual (car pair)]
+                             [bit (cdr pair)]
+                             
+                             [next-expo (+ 1 expo)]
+                             [next-bitlist (if (< p expo) ; This causes the list to act like a window that shifts along until the leading bit is found.
+                                               (cons bit bitlist)
+                                               (cons bit (drop-right bitlist 1)))])
+
+                            (build-intbitlist-helper residual p next-bitlist next-expo))] )
+
 
 #|
-(int-to-bitlist-helper z acc)
-  z: integer? and positive?
-  acc: An accumulator for the bit list.
+(build-fracbitlist r p)
+  r: The real numbered fraction being converted to a magnitude bitlist.
+  p: The precision of the bitlist.
 
-  Returns a list of bits with no leading 0's that represent z in binary.
-  Note that the list is in little-endian format, i.e. the least significant bit is first.
-  Note that 0 is represented as an empty list.
+  Returns a pair (bitlist . exp)
+  bitlist:
+    - A bitlist representing the most significant bits of r using only p degrees of precision.
+    - 0 <= (length bitlist) <= p
+  exp:
+    - The exponent of the most significant bit.
 |#
-(define (int-to-bitlist-helper z acc)
-  (cond
-    [(<= z 0) (reverse acc)]
-    [else (let*-values ([(q r) (quotient/remainder z 2)])
-            (cond
-              [(equal? q 0) (int-to-bitlist-helper -1 (cons r acc))]
-              [else         (int-to-bitlist-helper q (cons r acc))]))]))
+(define (build-fracbitlist r p) 
+      (let* ([advance-pair (advance-to-leading-bit r fracbit-generator 0 (- SMALLEST_PRECISION_EXP 24))]; Advance no more than 125 positions
+             [advanced-r   (car advance-pair)]; Either the x that will generate the leading 1 or the x that generates the 126th 0.
+             [n-calls      (cdr advance-pair)]
+             [bitlist      (bitlist-filler '() p fracbit-generator advanced-r)])
+            
+            (cons (reverse bitlist) (+ n-calls 1))))
+
+#|
+(bitlist-filler bitlist p generate x)
+  bitlist: The current bitlist created so far.
+  p: The precision.
+  generate: A function that takes in a number and spits out a pair (residual . bit)
+
+  Fills the rest of the precision left in the bitlist.
+|#
+(define/match (bitlist-filler bitlist p generate x) 
+  [(p bitlist _ _) #:when (equal? p (length bitlist)) bitlist]
+  [(p bitlist generate x) 
+                          (let* ([pair     (generate x)]
+                                 [residual (car pair)]
+                                 [bit      (cdr pair)]
+
+                                 [next-bitlist  (cons bit bitlist)])
+
+                               (bitlist-filler next-bitlist p generate residual))])
+
+#|
+(advance-to-leading-bit x generate n cap)
+  x: The number to advance.
+  generate: the advancing function.
+  cap: The max number of times generate will be called.
+  n: an accumulator that counts how many times gerate was called.
+
+  Returns the pair (x' . n') where x' is the result of calling generate n' times succesively.
+  0 <= n' <= cap.
+|#
+(define/match (advance-to-leading-bit x generate n cap)
+  [(x generate z z) (cons x z)]; When n == cap.
+  [(x generate n cap) (let* ([pair     (generate x)]
+                             [residual (car pair)]
+                             [bit      (cdr pair)])
+                            
+                            (cond 
+                              [(equal? bit 0) (advance-to-leading-bit residual generate (+ n 1) cap)]
+                              [(equal? bit 1) (advance-to-leading-bit x generate n n)] ))]; This is the case when x generated a 1 so we must stop here.
+)            
+
+#|
+(intbit-generator z)
+  z: integer?
+
+  Returns the pair (residual . bit). residual, bit and z satisfy: z = 2*(residual) + bit
+|#
+(define (intbit-generator z) (let*-values ([(q r) (quotient/remainder z 2)])
+                                          (cons q r)))
+
+
+#|
+(fracbit-generator r)
+  r: and pos? real? (<= r 1)
+
+  Returns the pair (residual . bit). residual and bit: residual = {2*r} && bit = floor(2 * r) 
+|#
+(define (fracbit-generator r) (let* ([double-r (* r 2)]
+                                     [bit      (if (< double-r 1) 0 1)]
+                                     [residual (- double-r bit)]) 
+                                    (cons residual bit)))                
 
 #|
 (decompose-real r)
