@@ -104,15 +104,7 @@ Negates sign
           (== nsign 0))
          ((== sign 0)
           (== nsign 1))))
-#|
-Determines resultant sign of C in an operation A+(-B) = C
-|#
-(define (finalsigno sign1 sign2 expo1 expo2 frac1 frac2 rsign)
-  (conde ((== rsign sign2)
-          (<o expo1 expo2))
-         ((== rsign sign1)
-          (<=o expo2 expo1)
-          )))
+
 #|
 Adding leading bit to mantissa.
 |#
@@ -187,7 +179,6 @@ Floating-Point Addition
           ;fp-pluso (C, -A, B)
           ((=/= sign1 sign2)
            (fresh (resign newf newsign)
-                  ;(finalsigno sign1 sign2 expo1 expo2 frac1 frac2 resign)
                   (conde ((== resign sign1)
                           (negsigno sign2 newsign)
                           (== newf (list newsign expo2 frac2))
