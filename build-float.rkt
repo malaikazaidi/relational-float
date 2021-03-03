@@ -1,6 +1,6 @@
 #lang racket
 
-(provide build-truncated-float)
+;(provide build-truncated-float)
 
 (define SINGLE_P 23); + 1 to include hidden bit.
 
@@ -26,6 +26,16 @@
 |#
 (define (build-intbitlist z p) (build-intbitlist-helper z p '() -1))
 
+#|
+(build-intbitlist-helper z p bitlist expo)
+  z: The integer being built.
+  p: The precision of the bitlist.
+  bitlist: The bit accumulator for z.
+  expo: The exponent accumulator for z.
+
+  Returns the pair (bitlist' . expo') where bitlist is at most 24 bits long and expo'is the expooent
+  of the most significant bit.
+|#
 (define/match (build-intbitlist-helper z p bitlist expo)
   [(z _ bitlist expo) #:when (= z 0) (cons (reverse bitlist) expo)]
   [(z p bitlist expo) (let* ([pair (intbit-generator z)]
@@ -33,7 +43,7 @@
                              [bit (cdr pair)]
                              
                              [next-expo (+ 1 expo)]
-                             [next-bitlist (if (< p expo) ; This causes the list to act like a window that shifts along until the leading bit is found.
+                             [next-bitlist (if (< expo p) ; This causes the list to act like a window that shifts along until the leading bit is found.
                                                (cons bit bitlist)
                                                (cons bit (drop-right bitlist 1)))])
 
@@ -58,7 +68,7 @@
              [n-calls      (cdr advance-pair)]
              [bitlist      (bitlist-filler '() p fracbit-generator advanced-r)])
             
-            (cons (reverse bitlist) (+ n-calls 1))))
+            (cons bitlist (+ n-calls 1))))
 
 #|
 (bitlist-filler bitlist p generate x)
@@ -69,8 +79,8 @@
   Fills the rest of the precision left in the bitlist.
 |#
 (define/match (bitlist-filler bitlist p generate x) 
-  [(p bitlist _ _) #:when (equal? p (length bitlist)) bitlist]
-  [(p bitlist generate x) 
+  [(bitlist p _ _) #:when (equal? p (length bitlist)) bitlist]
+  [(bitlist p generate x) 
                           (let* ([pair     (generate x)]
                                  [residual (car pair)]
                                  [bit      (cdr pair)]
@@ -139,68 +149,6 @@
         
         (list sign int frac)))
 
-#|
-(fractional-bitlist r nbits)
-  r: A real number less than 1 and non-negative
-  nbits: The total number of bits to generate.
-
-  Return, pair (bitlst . zeros) where
-    - bitlist is the representation of r in bits. 
-    - zeros is the number of leading zeros before the first bit set to 1 in the representation of r.
-|#
-(define (fractional-bitlist r nbits) 
-  (let* 
-    ([bitlst-zeros-flag (fractional-bitlist-helper r (list '() nbits 0 #f))]
-     [bitlist           (first bitlst-zeros-flag)]
-     [zeros             (third bitlst-zeros-flag)]) 
-  
-    (cons bitlist zeros)))
-
-#|
-(fractional-bitlist-helper r nbits acc)
-  A helper function that is tail recursive.
-  Returns (bitlst nbits zeros flag)
-    - bitlist is the representation of r in bits.
-    - nbits is an internal intger used to count the number of bits created. 
-    - zeros is the number of leading zeros before the first bit set to 1 in the representation of r.
-    - flag is an internal flag that is used to determine if a 1 has been found.
-|#
-(define/match (fractional-bitlist-helper r acc)
-  [(r (list bitlist 0 zeros found-one)) (list bitlist 0 zeros found-one)]
-  [(r (list bitlist nbits zeros found-one))
-     (let* ([double-r (* 2 r)]
-            [next-bit (if (< double-r 1) 0 1)]
-            [next-r   (if (equal? next-bit 1) (- double-r 1) double-r)]
-            [next-acc (next-fractional-acc bitlist nbits zeros found-one next-bit)])
-
-            (fractional-bitlist-helper next-r next-acc))])
-
-#|
-(next-fractional-acc bitlist found-one acc-zeros next-bit)
-
-  Creates the next accumulator for the fractional-bitlist-helper function.
-|#
-(define (next-fractional-acc bitlist nbits zeros found-one next-bit)
-  (let* (; If we have already found a 1 start decreasing n-bits
-         ; Or, if we are about to fall off precision (leading zeros == (149 - nbits)) 
-         ;
-         [next-found-one (or found-one 
-                             (equal? next-bit 1) 
-                             (equal? (- SMALLEST_PRECISION_EXP nbits) zeros))]
-
-         [next-bitlist   (if next-found-one 
-                             (cons next-bit bitlist)
-                             bitlist)]
-                           
-         [next-nbits     (if next-found-one  
-                             (- nbits 1)
-                             nbits)]
-
-         [next-zeros     (if next-found-one  
-                             zeros
-                             (+ 1 zeros))])
-       
-        (list next-bitlist next-nbits next-zeros next-found-one)))
 
 #|
 (calculate-fractional-nbits bitlength)
@@ -252,18 +200,20 @@
 
   Returns a MKFP representation of the floating point number r.
 |#
-(define (build-truncated-float r) 
+#;(define (build-truncated-float r) 
     (let* 
       ([sign-int-frac     (decompose-real r)]
        [sign              (first sign-int-frac)]
        [integer-part      (second sign-int-frac)]
        [fractional-part   (third sign-int-frac)]
 
-       [binary-integer           (int-to-bitlist integer-part)]
-       [integer-bitlength        (length binary-integer)]
-       [required-fractional-bits (calculate-fractional-nbits integer-bitlength)]
+       [intbitlist-pair     (build-intbitlist integer-part)]
+       [binary-integer      (car intbitlist-pair)]
+       [intMSB-exp          (cdr intbitlist-pair)]
+       [integer-bitlength   (length binary-integer)]
+       [remaining-precision (calculate-fractional-nbits integer-bitlength)]
        
-       [frac-zeros          (fractional-bitlist fractional-part required-fractional-bits)]
+       [frac          (fractional-bitlist fractional-part required-fractional-bits)]
        [fractional-mantissa (car frac-zeros)]
        [leading-zeros       (cdr frac-zeros)]
 
