@@ -2,24 +2,31 @@
 (require "numbers.rkt")
 (provide zero one smallnorm largenorm seventytwo neg421 negseventy fortytwo sixty
          p2049 three n1020.625 n45.125 p12.8 p12.5 n45.2 p0.636018991
-         psmallestd plargestd underf p2^23 pinf ninf qnan snan four negone negfour)
+         psmallestd plargestd underf p2^23 pinf ninf qnan snan four negone negfour two p46 p132 n5 n74 n422 nthree nfortytwo
+         n38 nseventytwo n12 n420 ntwo p38 seventy)
                 
 
 ;defined some fp numbers for testing
 (define zero `(0 ,(build-num 0) ()))
 (define one `(0 ,(build-num 127) ,(make-list 23 0)))
+(define two `(0 (0 0 0 0 0 0 0 1) ,(make-list 23 0)))
+(define ntwo `(1 (0 0 0 0 0 0 0 1) ,(make-list 23 0)))
 (define negone `(1 ,(build-num 127) ,(make-list 23 0)))
 (define smallnorm `(0 ,(build-num 1) ,(make-list 23 0)))
 (define largenorm `(0 ,(build-num 254) ,(make-list 23 1)))
 (define four `(0 ,(build-num 129) ,(make-list 23 0)))
 (define negfour `(1 ,(build-num 129) ,(make-list 23 0)))
 (define seventytwo `(0 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)))
+(define nseventytwo `(1 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0)))
 (define neg421 `(1 ,(build-num 135) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 0 1)))
 (define negseventy `(1 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0)))
+(define seventy `(0 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0)))
 (define fortytwo `(0 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0)))
+(define nfortytwo `(1 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0)))
 (define sixty `(0 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1)))
 (define p2049 `(0 ,(build-num 138) (0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0)))
 (define three `(0 ,(build-num 128) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
+(define nthree `(1 ,(build-num 128) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
 (define p12.8 `(0 ,(build-num 130) (0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1)))
 (define p12.5 `(0 ,(build-num 130) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1)))
 (define n45.2 `(1 ,(build-num 132) (0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 0 1 1 0)))
@@ -34,5 +41,12 @@
 (define ninf `(1 (1 1 1 1 1 1 1 1) ,(make-list 23 0)))
 (define qnan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1))); Only most sig bit is important for distinguishing nans
 (define snan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0)))
-
-
+(define p46 `(0 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0)))
+(define p132 `(0 ,(build-num 134) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0)))
+(define n5 `(1 ,(build-num 129) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0)))
+(define n74 `(1 ,(build-num 133) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0)))
+(define n422 `(1 ,(build-num 135) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 1 0 1)))
+(define n38 `(1 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0)))
+(define p38 `(0 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0)))
+(define n12 `(1 ,(build-num 130) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
+(define n420 `(1 ,(build-num 135) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 1)))
