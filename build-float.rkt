@@ -1,6 +1,6 @@
 #lang racket
 
-;(provide build-truncated-float)
+(provide build-truncated-float)
 
 (define SINGLE_P 23); + 1 to include hidden bit.
 
@@ -11,6 +11,31 @@
 
 ; These are set to be constant so when we implement a variable precision 
 ; we can see how to modify the code easier. 
+
+#|
+(int-to-bitlist z)
+  z: integer? and positive?
+  Returns a list of bits with no leading 0's that represent z in binary.
+  Note that the list is in little-endian format, i.e. the least significant bit is first.
+  Note that z must be non-negative.
+|#
+(define (int-to-bitlist z) (int-to-bitlist-helper z '()))
+
+#|
+(int-to-bitlist-helper z acc)
+  z: integer? and positive?
+  acc: An accumulator for the bit list.
+  Returns a list of bits with no leading 0's that represent z in binary.
+  Note that the list is in little-endian format, i.e. the least significant bit is first.
+  Note that 0 is represented as an empty list.
+|#
+(define (int-to-bitlist-helper z acc)
+  (cond
+    [(<= z 0) (reverse acc)]
+    [else (let*-values ([(q r) (quotient/remainder z 2)])
+            (cond
+              [(equal? q 0) (int-to-bitlist-helper -1 (cons r acc))]
+              [else         (int-to-bitlist-helper q (cons r acc))]))]))
 
 #|
 (build-intbitlist z p)
@@ -43,7 +68,7 @@
                              [bit (cdr pair)]
                              
                              [next-expo (+ 1 expo)]
-                             [next-bitlist (if (< expo p) ; This causes the list to act like a window that shifts along until the leading bit is found.
+                             [next-bitlist (if (< next-expo p) ; This causes the list to act like a window that shifts along until the leading bit is found.
                                                (cons bit bitlist)
                                                (cons bit (drop-right bitlist 1)))])
 
@@ -117,7 +142,7 @@
   Returns the pair (residual . bit). residual, bit and z satisfy: z = 2*(residual) + bit
 |#
 (define (intbit-generator z) (let*-values ([(q r) (quotient/remainder z 2)])
-                                          (cons q r)))
+                                          (cons q (inexact->exact r))))
 
 
 #|
@@ -167,7 +192,7 @@
   Calculates the shifted exponent for the mkfp number.
 |#
 (define/match (calculate-shifted-exponent-n integer-bitlength leading-zeros)
-  [(0 leading-zeros)      (- EXP_SHIFT 1 leading-zeros)]; for single-floating point (EXP_SHIFT - 1)=126
+  [(0 leading-zeros)      (- EXP_SHIFT leading-zeros)];
   [(integer-bitlength _ ) (+ EXP_SHIFT -1 integer-bitlength)])
 
 #|
@@ -200,35 +225,74 @@
 
   Returns a MKFP representation of the floating point number r.
 |#
-#;(define (build-truncated-float r) 
-    (let* 
-      ([sign-int-frac     (decompose-real r)]
-       [sign              (first sign-int-frac)]
-       [integer-part      (second sign-int-frac)]
-       [fractional-part   (third sign-int-frac)]
+(define (build-truncated-float r) 
+  (let* 
+    ([sign-int-frac     (decompose-real r)]
+     [sign              (first sign-int-frac)]
+     [integer-part      (second sign-int-frac)]
+     [fractional-part   (third sign-int-frac)]
 
-       [intbitlist-pair     (build-intbitlist integer-part)]
-       [binary-integer      (car intbitlist-pair)]
-       [intMSB-exp          (cdr intbitlist-pair)]
-       [integer-bitlength   (length binary-integer)]
-       [remaining-precision (calculate-fractional-nbits integer-bitlength)]
+     [intbitlist-pair     (build-intbitlist integer-part (+ SINGLE_P 1))]
+     [binary-integer      (car intbitlist-pair)]
+     [intMSB-exp          (cdr intbitlist-pair)]
+     [integer-bitlength   (+ intMSB-exp 1)]); The number of bits it takes to fully represent the integer part.
+     (cond
+      [(>= intMSB-exp SINGLE_P) (let* ([mantissa (drop-right binary-integer 1)]; Drop the leading 1.
+                                       [exp-n    (+ EXP_SHIFT intMSB-exp)]
+                                       [exponent (int-to-bitlist exp-n)])
+
+                                    (list sign exponent mantissa))]; We know we are dealing with a pure integer.
+
+      [(equal? intMSB-exp -1) (let* ([frac-pair   (build-fracbitlist fractional-part (+ SINGLE_P 1))]; need 24 bits.
+                                     [frac        (car frac-pair)]
+                                     [fracMSB-exp (cdr frac-pair)]
+
+                                     [denormal? (and (equal? (last frac) 0) (equal? (- EXP_SHIFT 1) fracMSB-exp))]
+                                     [adjusted-fracMSB-exp (if denormal?
+                                                               (+ fracMSB-exp 1)
+                                                               fracMSB-exp)]
+
+                                     [mantissa (drop-right frac 1)]; Drop the leading 1.
+
+                                     [exp-n    (- EXP_SHIFT adjusted-fracMSB-exp)]
+                                     [exponent (int-to-bitlist exp-n)])
+
+                                    (list sign exponent mantissa))];We know we are dealing with a pure fraction.
+
+      [else (let* ([remaining-bits (- (+ SINGLE_P 1) (+ intMSB-exp 1))]; 24 - #of integer bits
+                   [frac-pair     (build-fracbitlist fractional-part remaining-bits)]; need 24 bits.
+                   [frac          (car frac-pair)]; Extract the computed fraction.
+                   [fracMSB-exp   (cdr frac-pair)]; Extract the exponent of the most significant bit from the fractional part.
+
+                   ; Compute the amount of bits taken from frac as we may need to add leading zeros before taking the frac bits.
+                   [leading-zeros      (- fracMSB-exp 1)]
+                   [zero-bits          (min remaining-bits leading-zeros)]; There maybe to many zeros between the fraction and the integer so we take the min.
+                   [zero-bitlist       (make-list zero-bits 0)]
+                   [remaining-fracbits (- remaining-bits zero-bits)]
+                   [frac-mantissa      (append (take-right frac remaining-fracbits) zero-bitlist)] ;compute the fraction part of the mantissa.
+
+                   [int-mantissa  (drop-right binary-integer 1)]; Drop the leading 1.
+                   [mantissa (append frac-mantissa int-mantissa)]
+                   [exp-n    (+ EXP_SHIFT intMSB-exp)]
+                   [exponent (int-to-bitlist exp-n)])
+                  (list sign exponent mantissa))])))
        
-       [frac          (fractional-bitlist fractional-part required-fractional-bits)]
-       [fractional-mantissa (car frac-zeros)]
-       [leading-zeros       (cdr frac-zeros)]
+     ;[frac-pair           (build-fracbitlist fractional-part remaining-precision)]
+     ;[fractional-mantissa (car frac-pair)]
+     ;[fracMSB-exp         (cdr frac-pair)]
 
        ; Check if denormalized to adjust leading zeros. With denorm 1 leading zero will not be accounted for.
-       [denorm? (and (equal? (last fractional-mantissa) 0) 
-                     (equal? leading-zeros (- SMALLEST_PRECISION_EXP HIDDEN_BIT_INDEX)); 
-                     (equal? integer-bitlength 0))]
+     ;[denorm? (and (equal? (last fractional-mantissa) 0) 
+     ;              (equal? fracMSB-exp (- SMALLEST_PRECISION_EXP SINGLE_P)); 126 
+     ;              (equal? integer-bitlength 0))]
       
-       [adjusted-leading-zeros (if denorm? (+ leading-zeros 1) leading-zeros)]
-       [shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength adjusted-leading-zeros)]
+     ;[adjusted-leading-zeros (if denorm? (+ fracMSB-exp 1) fracMSB-exp)]
+     ;[shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength adjusted-leading-zeros)]
 
-       [exponent (int-to-bitlist shifted-exponent-n)]
-       [mantissa (build-mantissa binary-integer fractional-mantissa adjusted-leading-zeros denorm?)]) 
+     ;[exponent (int-to-bitlist shifted-exponent-n)]
+     ;[mantissa (build-mantissa binary-integer fractional-mantissa adjusted-leading-zeros denorm?)]) 
 
-      (list sign exponent mantissa))) 
+    ;(list sign exponent mantissa))) 
 
 
 

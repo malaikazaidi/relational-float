@@ -35,7 +35,7 @@
 (define n45.2 `(1 ,(build-num 132) (0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 0 1 1 0)))
 (define n45.125 `(1 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 1 1 0)))
 (define n1020.625 `(1 ,(build-num 136) (0 0 0 0 0 0 0 0 0 0 0 1 0 1 0 0 1 1 1 1 1 1 1)))
-(define p0.636018991 `(0 ,(build-num 126) (0 0 1 0 0 1 0 0 0 1 0 0 1 0 1 1 0 1 0 0 0 1 0)))
+(define p0.636018991 `(0 ,(build-num 126) (0 0 1 0 0 1 0 0 0 1 0 0 1 0 1 1 0 1 0 0 0 1 0))) ; This number was NOT the result of TRUNCATED ROUNDING
 (define psmallestd `(0 ,(build-num 0) (1)))
 (define plargestd `(0 ,(build-num 0) ,(make-list 23 1))); 2^-126 * (1-2^(-23))
 (define underf `(0 ,(build-num 103) ,(make-list 23 0) ))

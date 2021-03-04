@@ -58,10 +58,10 @@
 (define denormaldecimal-truncation-test
   (test-suite "Tests for denormal decimals on build-truncated-float.rkt"
               (test-case "2^-149"
-                         (check-equal? (build-truncated-float (expt 2 -149))) psmallestd)
+                         (check-equal? (build-truncated-float (expt 2 -149)) psmallestd))
               (test-case "Largest Denormal Number"
                          (let* ([testnum (* (expt 2 -126) (- 1 (expt 2 -23)))])
-                          (check-equal? (build-truncated-float testnum) largenorm)))
+                          (check-equal? (build-truncated-float testnum) plargestd)))
   )
 )
 
