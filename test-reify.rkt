@@ -1,5 +1,5 @@
 #lang racket
-(require rackunit rackunit/text-ui "float.rkt" "test-numbers.rkt" "numbers.rkt")
+(require rackunit rackunit/gui "float.rkt" "test-numbers.rkt" "numbers.rkt")
 
 (define reify-exp-tests
   (test-suite "Tests for reify-exp"
@@ -61,7 +61,10 @@
               (test-case "Given mkfp(ninf) -> 'negative-infinity"
                          (check equal? (reify ninf) NEG-INFINITY))))
 
-(run-tests reify-exp-tests)
-(run-tests reify-sign-tests)
-(run-tests reify-frac-tests)
-(run-tests reify-tests)
+(define all-tests (test-suite "all tests" 
+                              reify-exp-tests
+                              reify-sign-tests
+                              reify-frac-tests
+                              reify-tests))
+
+(test/gui all-tests #:wait? #t)
