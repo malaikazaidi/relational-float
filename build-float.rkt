@@ -176,50 +176,6 @@
 
 
 #|
-(calculate-fractional-nbits bitlength)
-  bitlength: The length of the integer part of r in bits which was passed into build-truncated-float.
-             pos?
-  Returns the number of bits required from the fractional part of r to create a mantissa.
-|#
-(define (calculate-fractional-nbits bitlength)
-  (max 0 (- HIDDEN_BIT_INDEX bitlength))); 24 to account for the hidden bit
-
-#|
-(calculate-shifted-exponent-n integer-bitlength leading-zeros)
-  integer-bitlength: pos? int?
-  leading-zeros: pos? int?
-
-  Calculates the shifted exponent for the mkfp number.
-|#
-(define/match (calculate-shifted-exponent-n integer-bitlength leading-zeros)
-  [(0 leading-zeros)      (- EXP_SHIFT leading-zeros)];
-  [(integer-bitlength _ ) (+ EXP_SHIFT -1 integer-bitlength)])
-
-#|
-(build-mantissa binary-integer fractional-mantissa leading-zeros)
-  binary-integer: A binary integer with no leading zeros and in little-endian format.
-  fractional-mantissa: A 24 bit mantissa
-  leading-zeros: The number of zeros preceeding the bits in the fractional-mantissa.
-
-  Returns the complete mantissa after droping the hidden bit.
-|#
-(define/match (build-mantissa binary-integer fractional-mantissa leading-zeros denorm?) 
-  [('() fractional-mantissa _ #t)            (dropf-right fractional-mantissa zero?)] ; drop the leading zeros.
-  [('() fractional-mantissa _ #f)            (drop-right fractional-mantissa 1)] ; drop the leading 1
-  [(binary-integer fractional-mantissa leading-zeros _) 
-    (let* ([int-length         (length binary-integer)]; The bit length of the integer
-           [remaining-bits     (max 0 (- HIDDEN_BIT_INDEX int-length))]; Total number of bits we can take.
-           [zero-bits          (min remaining-bits leading-zeros)]; The number of zeros to add.
-
-           [mantissa-bits      (max 0 (- remaining-bits zero-bits ))]; Number of bits from fractional mantissa we keep.
-
-           [with-zeros         (drop-right (append (make-list zero-bits 0) binary-integer) 1)]
-           [truncated-mantissa (take-right fractional-mantissa mantissa-bits)])
-           
-           (append truncated-mantissa with-zeros))])
-
-
-#|
 (build-truncated-float r)
   r: A racket float.
 
@@ -276,27 +232,4 @@
                    [exp-n    (+ EXP_SHIFT intMSB-exp)]
                    [exponent (int-to-bitlist exp-n)])
                   (list sign exponent mantissa))])))
-       
-     ;[frac-pair           (build-fracbitlist fractional-part remaining-precision)]
-     ;[fractional-mantissa (car frac-pair)]
-     ;[fracMSB-exp         (cdr frac-pair)]
-
-       ; Check if denormalized to adjust leading zeros. With denorm 1 leading zero will not be accounted for.
-     ;[denorm? (and (equal? (last fractional-mantissa) 0) 
-     ;              (equal? fracMSB-exp (- SMALLEST_PRECISION_EXP SINGLE_P)); 126 
-     ;              (equal? integer-bitlength 0))]
-      
-     ;[adjusted-leading-zeros (if denorm? (+ fracMSB-exp 1) fracMSB-exp)]
-     ;[shifted-exponent-n (calculate-shifted-exponent-n integer-bitlength adjusted-leading-zeros)]
-
-     ;[exponent (int-to-bitlist shifted-exponent-n)]
-     ;[mantissa (build-mantissa binary-integer fractional-mantissa adjusted-leading-zeros denorm?)]) 
-
-    ;(list sign exponent mantissa))) 
-
-
-
-
-
-
 
