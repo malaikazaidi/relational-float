@@ -3,7 +3,7 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt")
-(provide fp-pluso)
+(provide fp-pluso fp-multo)
 
 (define BIAS (build-num 127))
 
@@ -123,7 +123,7 @@ Adding leading bit to mantissa.
 Adds 2 exponents and subtracts bias (127)
 |#
 (define (shifted-pluso expo1 expo2 rexpo)
-  (fresh (exposum)
+  (fresh (exposum) 
          (pluso expo1 expo2 exposum)
          (pluso rexpo BIAS exposum)
          )
@@ -188,26 +188,58 @@ Floating-Point Addition
                           (== newf (list newsign expo1 frac1))
                           (fp-pluso newf r f2)))))
           )))
-
+#|
+Performs long multiplication on the mantissa.
+|#
 (define (long-multo man1 man2 manr acc)
   (conde 
-    ((== man2 '())
-     (== acc manr))
+   ((== man2 '())
+    (== acc manr))
 
-    ((=/= man2 '())
-     (fresh (bit man2-rest shifted-man acc^) 
+   ((=/= man2 '())
+    (fresh (bit man2-rest shifted-man acc^) 
 
-       (== shifted-man (cons 0 man1))  
+           (== shifted-man (cons 0 man1))  
 
-       (== man2 (cons bit man2-rest))
-       (conde
-         ((== bit 0)
-          (== acc acc^))
-         ((== bit 1)
-          (pluso acc man1 acc^)))
+           (== man2 (cons bit man2-rest))
+           (conde
+            ((== bit 0)
+             (== acc acc^))
+            ((== bit 1)
+             (pluso acc man1 acc^)))
 
-       (long-multo shifted-man man2-rest manr acc^)))))
+           (long-multo shifted-man man2-rest manr acc^)))))
+#|
+Normalizes the exponent.
+|#
+(define (mult-expo-normalize pre-expo man1 man2 manr rexpo)
+  (fresh (man1man2)
+         (appendo man1 man2 man1man2)
+         (mult-check-lengtho man1man2 manr pre-expo rexpo)
+         )
+  )
+#|
+Checks if exponent needs to be normalized or not according to the length.
+|#
+(define (mult-check-lengtho man1man2 manr pre-expo rexpo)
+  (conde ((== manr '())
+          (== man1man2 manr)
+          (pluso '(1) pre-expo rexpo))
+         ((== manr '())
+          (=/= man1man2 manr)
+          (== pre-expo rexpo))
+         ((=/= manr '())
+          (fresh (b1 b2 restmanr restman1man2)
+                 (== man1man2 (cons b1 restman1man2))
+                 (== manr (cons b2 restmanr))
+                 (mult-check-lengtho restman1man2 restmanr pre-expo rexpo)
+                 ))
+         )
+  )
 
+#|
+Floating-Point Multiplication
+|#
 (define (fp-multo f1 f2 r)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo man1 man2 manr pre-fracr)
          (== f1 (list sign1 expo1 frac1))
@@ -225,7 +257,6 @@ Floating-Point Addition
           )
 
          (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
-         (== pre-rexpo rexpo); Not correct but used for testing other functionality.
 
          ; add leading ones
          (appendo frac1 '(1) man1)
@@ -233,5 +264,8 @@ Floating-Point Addition
          (appendo pre-fracr '(1) manr)
          (drop-leastsig-bito pre-fracr rfrac)
 
+         (mult-expo-normalize pre-rexpo man1 man2 manr rexpo)
          (long-multo man1 man2 manr '())
+         
+         
          ))

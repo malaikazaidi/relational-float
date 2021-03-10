@@ -40,7 +40,20 @@
                          (check-equal? (first(run 1 (x) (fp-pluso neg421 x n422))) negone))
               #;(test-case "x + -421  = n422"
                          (check-equal? (first(run 1 (x) (fp-pluso x neg421 n422))) negone))
-
+              (test-case "2.5+3"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float 2.5) three x))) (build-truncated-float 5.5)))
+              (test-case "2.5+3.25"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float 2.5) (build-truncated-float 3.25) x))) (build-truncated-float 5.75)))
+              (test-case "1.05+3.2325"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float 1.05) (build-truncated-float 3.2325) x))) (build-truncated-float 4.2825)))
+              (test-case "-4 + -9"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float -4) (build-truncated-float -9) x))) (build-truncated-float -13)))
+              (test-case "-10.12 + -23.245"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float -10.12) (build-truncated-float -23.245) x))) (build-truncated-float -33.365)))
+              (test-case "-10.12 + x = -33.365"
+                         (check-equal? (first (run 1 (x) (fp-pluso (build-truncated-float -10.12) x (build-truncated-float -33.365))))(build-truncated-float -23.245) ))
+              (test-case "x + -10.12 = -33.365"
+                         (check-equal? (first (run 1 (x) (fp-pluso x (build-truncated-float -10.12) (build-truncated-float -33.365))))(build-truncated-float -23.245) ))
               ))
 
 (define nonequal-signs-test
@@ -74,11 +87,21 @@
               ;Takes really long, doesn't give a response
               #;(test-case "72+ x = 70"
                          (check-equal? (first(run 1 (x) (fp-pluso seventytwo x seventy))) ntwo))
-              (test-case "-4 + x = -3"
+              #;(test-case "-4 + x = -3"
                          (check-equal? (first(run 1 (x) (fp-pluso negfour x nthree))) one))
-              (test-case "x + -4 = -3"
+              #;(test-case "x + -4 = -3"
                          (check-equal? (first(run 1 (x) (fp-pluso x negfour nthree))) one))
-              
+              (test-case "4.5 + -7 = -2.5"
+                         (check-equal? (first(run 1 (x) (fp-pluso (build-truncated-float 4.5) (build-truncated-float -7) x))) (build-truncated-float -2.5)))
+              ;FAILS:(
+              #;(test-case "-10.2 + 4.1 = -6.1"
+                         (check-equal? (first(run 1 (x) (fp-pluso (build-truncated-float -10.2) (build-truncated-float 4.1) x))) (build-truncated-float -6.1)))
+              ;ALSO FAILS
+              #;(test-case "-10.12 + 4.6 = -5.52"
+                         (check-equal? (first(run 1 (x) (fp-pluso (build-truncated-float -10.12) (build-truncated-float 4.6) x))) (build-truncated-float -5.52)))
+              ;ALSO FAILS
+              #;(test-case "4.5 + -6.3 = -1.8"
+                         (check-equal? (first(run 1 (x) (fp-pluso (build-truncated-float 4.5) (build-truncated-float -6.3) x))) (build-truncated-float -1.8)))
 
               ))
 
