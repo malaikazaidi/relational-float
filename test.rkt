@@ -1,50 +1,28 @@
 #lang racket
 
-(require "mk.rkt")
-(require "numbers.rkt")
-(require "mk-float.rkt")
+(require rackunit rackunit/text-ui)
 
-(define one `(0 ,(build-num 127) ,(make-list 23 0)))
-
-(define one-plus-one 
-  '(0 (0 0 0 0 0 0 0 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)))
-
-(displayln "1+1=?")
-(run 1 (x) (fp-pluso one one x))
-
-;(displayln "?+1=2 (this was slow)")
-;(run 1 (x) (fp-pluso x one one-plus-one)) ;slow
-
-;(displayln "1+?=2 (this used to be fast--but now slow when we fixed #digits)")
-;(run 1 (x) (fp-pluso one x one-plus-one)) ;fast
-; result: (0 (1 1 1 1 1 1 1) ())
-; alternative that we could have gotten:
-;   (0 (1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
-
-; (run 1 (x) (fp-pluso `(0 (1 1 1 1 1 1 1) ,x)
-;                     one
-;                     one-plus-one)) ;also slow
-
-(displayln "?+1=2")
-(run 1 (x) (fp-pluso `(0 ,x (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0))
-                     one
-                     one-plus-one)) ;fast
-
-(run 1 (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
-     (fp-pluso (list 0 '(1 1 1 1 1 1 1) (list 0 0 0 0 0 0 0 0 0 0 0 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
-               one
-               one-plus-one)) ;also fast
-
-(run 1 (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
-     (fp-pluso (list 0 '(1 1 1 1 1 1 1) (list 0 0 0 0 0 0 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
-               one
-               one-plus-one)) ;also fast
+(define-syntax check-equal?/time
+     (syntax-rules ()
+     [(check-equal?/time test-expr pre-check-proc expected-expr)
+          (let* ([evald (time test-expr)]
+                 [processed-expr (pre-check-proc evald)])
+                (check-equal? processed-expr expected-expr))]
+     [(check-equal?/time test-expr expected-expr)
+          (check-equal? (time test-expr) expected-expr)]))
 
 
-(run 1 (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
-     (fp-pluso (list 0 '(1 1 1 1 1 1 1) (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
-               one
-               one-plus-one)) ;also fast
+(define test 
+     (test-suite "macro check"
+          (test-case "test macro no pre-check-proc: test should fail."
+               (check-equal?/time 1 2))
+          (test-case "test macro no pre-check-proc: test should pass."
+               (check-equal?/time '(1 2 3 4) '(1 2 3 4)))
+          (test-case "test macro with pre-check-proc: test should fail."
+               (check-equal?/time '(4 3 2 2) last 1))
+          (test-case "test macro with pre-check-proc: test should pass"
+               (check-equal?/time '(4 3 2 2) last 2))
 
+     ))
 
-
+(run-tests test 'verbose)
