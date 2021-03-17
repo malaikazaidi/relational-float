@@ -3,6 +3,7 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt")
+(require "build-float.rkt")
 (provide fp-pluso fp-multo)
 
 (define BIAS (build-num 127))
@@ -129,6 +130,46 @@ Adds 2 exponents and subtracts bias (127)
          )
   )
 
+(define (fp-<= f1 f2)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+         (== f1 (list sign1 expo1 frac1))
+         (== f2 (list sign2 expo2 frac2))
+         (conde ((== sign1 sign2)
+                 (== expo1 expo2)
+                 (<=o frac1 frac2))
+                ((== sign1 sign2)
+                 (<=o expo1 expo2))
+                ((=/= sign1 sign2)
+                 (== sign1 1)
+                 (== sign2 0)))
+         ))
+
+
+(define (fp-< f1 f2)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+         (== f1 (list sign1 expo1 frac1))
+         (== f2 (list sign2 expo2 frac2))
+         (conde ((== sign1 sign2)
+                 (== expo1 expo2)
+                 (<o frac1 frac2))
+                ((== sign1 sign2)
+                 (<o expo1 expo2))
+                ((=/= sign1 sign2)
+                 (== sign1 1)
+                 (== sign2 0))
+                )
+         ))
+
+(define (fp-= f1 f2)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+         (== f1 (list sign1 expo1 frac1))
+         (== f2 (list sign2 expo2 frac2))
+         (conde ((== sign1 sign2)
+                 (== expo1 expo2)
+                 (== frac1 frac2)))
+         ))
+
+
 #|
 Floating-Point Addition
 |#
@@ -167,8 +208,10 @@ Floating-Point Addition
                   ))
 
           ((== sign1 sign2)
-           (=/= expo1 expo2)
-           (fp-pluso f2 f1 r))
+           (fresh (expo-diff)
+                  (pluso expo2 expo-diff expo1)
+                  (=/= expo1 expo2)
+                  (fp-pluso f2 f1 r)))
         
           ;when signs are opposite
           ;When C has the same sign as A (+)
@@ -188,27 +231,23 @@ Floating-Point Addition
                           (== newf (list newsign expo1 frac1))
                           (fp-pluso newf r f2)))))
           )))
+
 #|
-Performs long multiplication on the mantissa.
+Performs and operation on bit1 and bit2. Outputs an Oleg number.
 |#
-(define (long-multo man1 man2 manr acc)
-  (conde 
-   ((== man2 '())
-    (== acc manr))
+(define (ando bit1 bit2 bitr)
+  (conde ((== bit1 bit2)
+          (== bit1 1)
+          (== bitr '(1)))
+         
+         ((== bit1 bit2)
+          (== bit1 0)
+          (== bitr '()))
+         
+         ((=/= bit1 bit2)
+          (== bitr '()))))
 
-   ((=/= man2 '())
-    (fresh (bit man2-rest shifted-man acc^) 
 
-           (== shifted-man (cons 0 man1))  
-
-           (== man2 (cons bit man2-rest))
-           (conde
-            ((== bit 0)
-             (== acc acc^))
-            ((== bit 1)
-             (pluso acc man1 acc^)))
-
-           (long-multo shifted-man man2-rest manr acc^)))))
 #|
 Normalizes the exponent.
 |#
@@ -250,14 +289,12 @@ Floating-Point Multiplication
          (frac-lengtho rfrac)
          
          (conde 
-          ((== sign1 sign2)
-           (== rsign 0))
-          ((=/= sign1 sign2)
-           (== rsign 1))
+          ((== sign1 1) (== sign2 1) (== rsign 0))
+          ((== sign1 0) (== sign2 0) (== rsign 0))
+          ((== sign1 1) (== sign2 0) (== rsign 1))
+          ((== sign1 0) (== sign2 1) (== rsign 1))
           )
-
-         (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
-
+         
          ; add leading ones
          (appendo frac1 '(1) man1)
          (appendo frac2 '(1) man2)
@@ -265,7 +302,10 @@ Floating-Point Multiplication
          (drop-leastsig-bito pre-fracr rfrac)
 
          (mult-expo-normalize pre-rexpo man1 man2 manr rexpo)
-         (long-multo man1 man2 manr '())
          
+         (*o man1 man2 manr)
          
+         (shifted-pluso expo1 expo2 pre-rexpo) ;Still need to determine if 1 needs to be added
+         
+
          ))

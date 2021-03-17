@@ -6,9 +6,9 @@
               (test-case "1+1"
                          (check-equal? (first (time (run 1 (x) (fp-pluso one one x)))) two))
               (test-case "2+1"
-                         (check-equal? (first (run 1 (x) (fp-pluso two one x))) three)))
+                         (check-equal? (first (run 1 (x) (fp-pluso two one x))) three))
               (test-case "42+4"
-                         (check-equal? (first (run 1 (x) (fp-pluso fortytwo four x))) p46)))
+                         (check-equal? (first (run 1 (x) (fp-pluso fortytwo four x))) p46))
               (test-case "72+60"
                          (check-equal? (first(run 1 (x) (fp-pluso seventytwo sixty x))) p132))
               (test-case "-4 + -1"
@@ -101,5 +101,5 @@
 
 (displayln "Tests for same sign fp numbers")
 (run-tests equal-signs-test)
-;(displayln "Tests for different sign fp numbers")
-;(run-tests nonequal-signs-test)
+(displayln "Tests for different sign fp numbers")
+(run-tests nonequal-signs-test)
