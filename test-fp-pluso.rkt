@@ -1,5 +1,5 @@
 #lang racket
-(require rackunit rackunit/text-ui "mk-float.rkt" "test-numbers.rkt" "mk.rkt" "build-float.rkt" "float.rkt")
+(require rackunit rackunit/text-ui "test.rkt" "mk-float.rkt" "test-numbers.rkt" "mk.rkt" "build-float.rkt" "float.rkt")
 
 (define equal-signs-test
   (test-suite "Tests for fp numbers that have equal signs"
