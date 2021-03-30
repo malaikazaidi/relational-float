@@ -1,9 +1,6 @@
 #lang racket
-(require "numbers.rkt")
-(provide zero one smallnorm largenorm seventytwo neg421 negseventy fortytwo sixty
-         p2049 three n1020.625 n45.125 p12.8 p12.5 n45.2 p0.636018991
-         psmallestd plargestd underf p2^23 pinf ninf qnan snan four negone negfour two p46 p132 n5 n74 n422 nthree nfortytwo
-         n38 nseventytwo n12 n420 ntwo p38 seventy)
+(require "numbers.rkt" "build-float.rkt")
+(provide (all-defined-out))
                 
 
 ;defined some fp numbers for testing
@@ -50,3 +47,22 @@
 (define p38 `(0 ,(build-num 132) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0)))
 (define n12 `(1 ,(build-num 130) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
 (define n420 `(1 ,(build-num 135) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 1 0 1)))
+(define p5.5 (build-truncated-float 5.5))
+(define n5.5 (build-truncated-float -5.5))
+(define p4.5 (build-truncated-float 4.5))
+(define p2.5 (build-truncated-float 2.5))
+(define n2.5 (build-truncated-float -2.5))
+(define n2.25 (build-truncated-float -2.25))
+(define p2.25 (build-truncated-float 2.25))
+(define p5.75 (build-truncated-float 5.75))
+(define p3.25 (build-truncated-float 3.25))
+(define n3.25 (build-truncated-float -3.25))
+(define p4.2825 (build-truncated-float 4.2825))
+(define p1.05 (build-truncated-float 1.05))
+(define p3.2325 (build-truncated-float 3.2325))
+(define n23.245 (build-truncated-float -23.245))
+(define n10.12  (build-truncated-float -10.12))
+(define n33.365 (build-truncated-float -33.365))
+(define n9 (build-truncated-float -9))
+(define n7 (build-truncated-float -7))
+(define n13 (build-truncated-float -13))
