@@ -73,7 +73,7 @@
 |#
 (define/match (err-msg-folder msg acc)
  [("" acc) acc]
- [(msg acc) (string-append acc "AND" msg)])
+ [(msg acc) (string-append acc " AND " msg)])
 
 #|
 (build-err-msg msgs)
@@ -135,7 +135,11 @@
         (begin
             (displayln (string-append "Running: " <name> "\n"))
             (time (run* (<lvar> <lvars> ...) <constraint-expr>)))]))
-            
+
+#|
+(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...)) ; Runs for 1 answer and ensures there is one answer.
+(test/fp-relation-r <test-name> <n> <expected-m> <expected> : <relation-expr> (<lvar> <lvars> ...)) ; Runs for n answers and ensures m answers are found.
+|#          
 (define-syntax test/fp-relation-r
     (syntax-rules (:) 
      [(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...))
