@@ -125,15 +125,15 @@
 
      [(run/time <name> : <constraint-expr> (<lvar> <lvars> ...))
         (begin
-            (displayln (string-append "Running: " <name> "\n"))
+            (displayln (string-append "\n" "Running: " <name>))
             (time (run 1 (<lvar> <lvars> ...) <constraint-expr>)))]
      [(run/time <name> : <constraint-expr> <n> (<lvar> <lvars> ...))
         (begin
-            (displayln (string-append "Running: " <name> "\n"))
+            (displayln (string-append "\n" "Running: " <name>))
             (time (run <n> (<lvar> <lvars> ...) <constraint-expr>)))]
      [(run/time <name> : <constraint-expr> * (<lvar> <lvars> ...))
         (begin
-            (displayln (string-append "Running: " <name> "\n"))
+            (displayln (string-append "\n" "Running: " <name>))
             (time (run* (<lvar> <lvars> ...) <constraint-expr>)))]))
 
 #|

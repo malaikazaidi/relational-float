@@ -61,7 +61,7 @@
 
               ))
 
-;(displayln "Tests for same sign fp numbers")
-;(run-tests equal-signs-test)
+(displayln "Tests for same sign fp numbers")
+(run-tests equal-signs-test)
 (displayln "Tests for different sign fp numbers")
 (run-tests nonequal-signs-test)
