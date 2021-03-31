@@ -68,6 +68,19 @@ Shifts the exponent.
                  (shifto shifted-frac n-minus-1 result)
                  ))))
 
+#|
+Shifts the exponent. Removes least sig bits
+|# 
+(define (correct-shifto frac n result)
+  (conde ((zeroo n)
+          (== frac result))
+         ((poso n)
+          (fresh (shifted-frac n-minus-1 bit)
+                 (== frac (cons bit shifted-frac))
+                 (pluso n-minus-1 '(1) n)
+                 (correct-shifto shifted-frac n-minus-1 result)
+                 ))))
+
 
 #|
 Shifts exponent
@@ -185,27 +198,40 @@ Floating-Point Addition
          (conde 
           ((== sign1 sign2)
            ;keep frac-result as final return value
-           (fresh (expo-diff shifted-frac2 man1 man2 man-sum frac-result man-result)
+           (fresh (expo-diff shifted-frac1 man1 man2 man-sum frac-result man-result)
                   (== rsign sign1)
                   ; get mantissas
-                  (appendo frac1 '(1) man1)
+                  ;(appendo frac1 '(1) man1)
+                 ; (pluso expo1 expo-diff expo2)
+                  
+                  (appendo frac2 '(1) man2)
                   (pluso expo1 expo-diff expo2)
                   
                   ;shift the frac of the SMALLER exponent
-                  (shifto frac2 expo-diff shifted-frac2)
+                  ;(shifto frac2 expo-diff shifted-frac2)
+                  
+                  ;(shifto frac1 expo-diff shifted-frac1)
+                  (correct-shifto frac1 expo-diff shifted-frac1)
                                   
                   ; exponent shift
+                  ;(shift-expo man2 man-sum expo2 rexpo)
+                  ;(appendo shifted-frac2 '(1) man2)
+
                   (shift-expo man2 man-sum expo2 rexpo)
-                  (appendo shifted-frac2 '(1) man2)
-                                  
+                  (appendo shifted-frac1 '(1) man1)
+                  
                   ;drop most-sig bit
+                  ;(appendo man-result '(1) man-sum)
+                  
                   (appendo man-result '(1) man-sum)
                                   
                   ;drop least-sig bit
-                  (drop-leastsig-bito man-result rfrac)
-                                  
+                  ;(drop-leastsig-bito man-result rfrac)
+                  
+                   (drop-leastsig-bito man-result rfrac)
+                   
                   ; oleg number addition
-                  (pluso man1 man2 man-sum)
+                   (pluso man1 man2 man-sum)
                   ))
 
           ((== sign1 sign2)
