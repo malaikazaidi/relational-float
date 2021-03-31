@@ -130,6 +130,7 @@ Adds 2 exponents and subtracts bias (127)
          )
   )
 
+; add constraint for -zero and +zero to be equal to one another.
 (define (fp-<= f1 f2)
   (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
          (== f1 (list sign1 expo1 frac1))
