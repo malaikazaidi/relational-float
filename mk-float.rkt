@@ -129,8 +129,8 @@ Adding leading bit to mantissa.
           (appendo man '(1) r))))
 
 (define (frac-lengtho m)
-  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23)
-         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23))
+  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24)
+         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24))
          ))
 
 #|
@@ -185,6 +185,57 @@ Adds 2 exponents and subtracts bias (127)
 
 
 #|
+Floating-Point Addition for same signs
+|#
+(define (fp-samesignaddero f1 f2 expo-diff r)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+         (== f1 (list sign1 expo1 frac1))
+         (frac-lengtho frac1)
+         (== f2 (list sign2 expo2 frac2))
+         (frac-lengtho frac2)
+         (== r (list rsign rexpo rfrac))
+         (frac-lengtho rfrac)
+         (== sign1 sign2)
+          ;keep frac-result as final return value
+          (fresh (shifted-frac1 frac-sum frac-result)
+                 (== rsign sign1)
+              
+                 ;shift the frac of the SMALLER exponent
+                 (correct-shifto frac1 expo-diff shifted-frac1)
+                                  
+                 ; exponent shift
+                 (shift-expo frac2 frac-sum expo2 rexpo)
+                  
+                 ;drop least-sig bit
+                 (drop-leastsig-bito frac-sum rfrac)
+                   
+                 ; oleg number addition
+                 (pluso shifted-frac1 frac2 frac-sum)
+                 ))
+  )
+
+#|
+swaps the order of parameters
+|#
+(define (fp-swapo f1 f2 r)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac expo-diff)
+         (== f1 (list sign1 expo1 frac1))
+         (frac-lengtho frac1)
+         (== f2 (list sign2 expo2 frac2))
+         (frac-lengtho frac2)
+         (== r (list rsign rexpo rfrac))
+         (frac-lengtho rfrac)
+         
+         (conde
+          ((pluso expo1 expo-diff expo2)
+           (fp-samesignaddero f1 f2 expo-diff r))
+          ((pluso expo2 expo-diff expo1)
+           (=/= expo1 expo2)
+           (fp-samesignaddero f2 f1 expo-diff r))
+          ))
+  )
+
+#|
 Floating-Point Addition
 |#
 (define (fp-pluso f1 f2 r)
@@ -197,49 +248,9 @@ Floating-Point Addition
          (frac-lengtho rfrac)
          (conde 
           ((== sign1 sign2)
-           ;keep frac-result as final return value
-           (fresh (expo-diff shifted-frac1 man1 man2 man-sum frac-result man-result)
-                  (== rsign sign1)
-                  ; get mantissas
-                  ;(appendo frac1 '(1) man1)
-                 ; (pluso expo1 expo-diff expo2)
-                  
-                  (appendo frac2 '(1) man2)
-                  (pluso expo1 expo-diff expo2)
-                  
-                  ;shift the frac of the SMALLER exponent
-                  ;(shifto frac2 expo-diff shifted-frac2)
-                  
-                  ;(shifto frac1 expo-diff shifted-frac1)
-                  (correct-shifto frac1 expo-diff shifted-frac1)
-                                  
-                  ; exponent shift
-                  ;(shift-expo man2 man-sum expo2 rexpo)
-                  ;(appendo shifted-frac2 '(1) man2)
-
-                  (shift-expo man2 man-sum expo2 rexpo)
-                  (appendo shifted-frac1 '(1) man1)
-                  
-                  ;drop most-sig bit
-                  ;(appendo man-result '(1) man-sum)
-                  
-                  (appendo man-result '(1) man-sum)
-                                  
-                  ;drop least-sig bit
-                  ;(drop-leastsig-bito man-result rfrac)
-                  
-                   (drop-leastsig-bito man-result rfrac)
-                   
-                  ; oleg number addition
-                   (pluso man1 man2 man-sum)
-                  ))
-
-          ((== sign1 sign2)
-           (fresh (expo-diff)
-                  (pluso expo2 expo-diff expo1)
-                  (=/= expo1 expo2)
-                  (fp-pluso f2 f1 r)))
-        
+           (== sign2 rsign)
+           (fp-swapo f1 f2 r))
+          
           ;when signs are opposite
           ;When C has the same sign as A (+)
           ;A+(-B) = C -> A = C + B
@@ -248,15 +259,15 @@ Floating-Point Addition
           ;A + (-B) = -C -> -B = -C + (-A)
           ;fp-pluso (C, -A, B)
           ((=/= sign1 sign2)
-           (fresh (resign newf newsign)
-                  (conde ((== resign sign1)
+           (fresh (newf newsign)
+                  (conde ((== sign1 rsign)
                           (negsigno sign2 newsign)
                           (== newf (list newsign expo2 frac2))
-                          (fp-pluso newf r f1))
-                         ((== resign sign2)
+                          (fp-swapo newf r f1))
+                         ((== sign2 rsign)
                           (negsigno sign1 newsign)
                           (== newf (list newsign expo1 frac1))
-                          (fp-pluso newf r f2)))))
+                          (fp-swapo newf r f2)))))
           )))
 
 #|
