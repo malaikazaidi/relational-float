@@ -2,11 +2,10 @@
 
 (provide build-truncated-float)
 
-(define SINGLE_P 23); + 1 to include hidden bit.
+(define SINGLE_P 24); + 1 to include hidden bit.
 
 (define SMALLEST_PRECISION_EXP 149)
 (define EXP_SHIFT 127)
-(define HIDDEN_BIT_INDEX 24)
 (define SMALLEST_NORMAL_MAGNITUDE (expt 2 -126))
 
 ; These are set to be constant so when we implement a variable precision 
@@ -83,12 +82,12 @@
   Returns a pair (bitlist . exp)
   bitlist:
     - A bitlist representing the most significant bits of r using only p degrees of precision.
-    - 0 <= (length bitlist) <= p
+    - (length bitlist) = p
   exp:
     - The exponent of the most significant bit.
 |#
 (define (build-fracbitlist r p) 
-      (let* ([advance-pair (advance-to-leading-bit r fracbit-generator 0 (- SMALLEST_PRECISION_EXP 24))]; Advance no more than 125 positions
+      (let* ([advance-pair (advance-to-leading-bit r fracbit-generator 0 (- SMALLEST_PRECISION_EXP SINGLE_P))]; Advance no more than 125 positions
              [advanced-r   (car advance-pair)]; Either the x that will generate the leading 1 or the x that generates the 126th 0.
              [n-calls      (cdr advance-pair)]
              [bitlist      (bitlist-filler '() p fracbit-generator advanced-r)])
@@ -119,7 +118,7 @@
   x: The number to advance.
   generate: the advancing function.
   cap: The max number of times generate will be called.
-  n: an accumulator that counts how many times gerate was called.
+  n: an accumulator that counts how many times generate was called.
 
   Returns the pair (x' . n') where x' is the result of calling generate n' times succesively.
   0 <= n' <= cap.
@@ -188,18 +187,17 @@
      [integer-part      (second sign-int-frac)]
      [fractional-part   (third sign-int-frac)]
 
-     [intbitlist-pair     (build-intbitlist integer-part (+ SINGLE_P 1))]
+     [intbitlist-pair     (build-intbitlist integer-part SINGLE_P)]
      [binary-integer      (car intbitlist-pair)]
      [intMSB-exp          (cdr intbitlist-pair)]
      [integer-bitlength   (+ intMSB-exp 1)]); The number of bits it takes to fully represent the integer part.
      (cond
-      [(>= intMSB-exp SINGLE_P) (let* ([mantissa (drop-right binary-integer 1)]; Drop the leading 1.
-                                       [exp-n    (+ EXP_SHIFT intMSB-exp)]
+      [(>= intMSB-exp SINGLE_P) (let* ([exp-n    (+ EXP_SHIFT intMSB-exp)]
                                        [exponent (int-to-bitlist exp-n)])
 
-                                    (list sign exponent mantissa))]; We know we are dealing with a pure integer.
+                                    (list sign exponent binary-integer))]; We know we are dealing with a pure integer.
 
-      [(equal? intMSB-exp -1) (let* ([frac-pair   (build-fracbitlist fractional-part (+ SINGLE_P 1))]; need 24 bits.
+      [(equal? intMSB-exp -1) (let* ([frac-pair   (build-fracbitlist fractional-part SINGLE_P)]; need 24 bits, Dealing with a pure fraction.
                                      [frac        (car frac-pair)]
                                      [fracMSB-exp (cdr frac-pair)]
 
@@ -208,15 +206,17 @@
                                                                (+ fracMSB-exp 1)
                                                                fracMSB-exp)]
 
-                                     [mantissa (drop-right frac 1)]; Drop the leading 1.
+                                     [adjusted-frac (if denormal?
+                                                        (dropf-right frac zero?) ; drop leading 0's if denormal.
+                                                        frac)]; leave it the same.
 
                                      [exp-n    (- EXP_SHIFT adjusted-fracMSB-exp)]
                                      [exponent (int-to-bitlist exp-n)])
 
-                                    (list sign exponent mantissa))];We know we are dealing with a pure fraction.
+                                    (list sign exponent adjusted-frac))];We know we are dealing with a pure fraction.
 
-      [else (let* ([remaining-bits (- (+ SINGLE_P 1) (+ intMSB-exp 1))]; 24 - #of integer bits
-                   [frac-pair     (build-fracbitlist fractional-part remaining-bits)]; need 24 bits.
+      [else (let* ([remaining-bits (- SINGLE_P integer-bitlength)]; 24 - #of integer bits
+                   [frac-pair     (build-fracbitlist fractional-part remaining-bits)]; need the remianing-precision bits.
                    [frac          (car frac-pair)]; Extract the computed fraction.
                    [fracMSB-exp   (cdr frac-pair)]; Extract the exponent of the most significant bit from the fractional part.
 
@@ -227,8 +227,7 @@
                    [remaining-fracbits (- remaining-bits zero-bits)]
                    [frac-mantissa      (append (take-right frac remaining-fracbits) zero-bitlist)] ;compute the fraction part of the mantissa.
 
-                   [int-mantissa  (drop-right binary-integer 1)]; Drop the leading 1.
-                   [mantissa (append frac-mantissa int-mantissa)]
+                   [mantissa (append frac-mantissa binary-integer)]
                    [exp-n    (+ EXP_SHIFT intMSB-exp)]
                    [exponent (int-to-bitlist exp-n)])
                   (list sign exponent mantissa))])))

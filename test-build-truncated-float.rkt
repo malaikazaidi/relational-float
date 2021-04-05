@@ -1,6 +1,37 @@
 #lang racket
 
-(require rackunit rackunit/text-ui "build-float.rkt" "test-numbers.rkt")
+(require rackunit rackunit/text-ui "build-float.rkt")
+
+(define zero  `(0 ,(list) ,(list)))
+(define one   '(0 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define none  '(1 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define four  '(0 (1 0 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define nfour '(1 (1 0 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define p72   '(0 (1 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  1 0 0 1)))
+(define n70   '(1 (1 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 1 1  0 0 0 1)))
+(define p42   '(0 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 1 0 1)))
+(define p45   '(0 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 1 0  1 1 0 1)))
+(define n45.2 '(1 (0 0 1 0 0 0 0 1) (0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 0  1 1 0 1))) ; IEEE-754 when using truncated rounding.
+(define n421  '(1 (1 1 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 1 0 0  1 0 1 1)))
+(define p60   '(0 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  1 1 1 1)))
+(define p2049 '(0 (0 1 0 1 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  1 0 0 0  0 0 0 0  0 0 0 1)))
+(define three '(0 (0 0 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 1 1)))
+
+(define largenorm `(0 (0 1 1 1 1 1 1 1) ,(make-list 24 1)))
+(define smallnorm `(0 (1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define p12.5     '(0 (0 1 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 0 1 1)))
+(define p12.8     '(0 (0 1 0 0 0 0 0 1) (0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 1  0 0 1 1))); IEEE-754 when using truncated rounding.
+(define n45.125   '(1 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 0 1 0  1 1 0 1)))
+(define n1020.625 '(1 (0 0 0 1 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 1  0 1 0 0  1 1 1 1  1 1 1 1)))
+
+(define p0.9921875 '(0 (0 1 1 1 1 1 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 1 1 1  1 1 1 1)))
+
+(define p0.555555522442 '(0 (0 1 1 1 1 1 1) (1 1 0 0  0 1 1 1  0 0 0 1  1 1 0 0  0 1 1 1  0 0 0 1)))
+(define p0.00000190734  '(0 (0 0 1 1 0 1 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define p0.636018991    '(0 (0 1 1 1 1 1 1) (1 1 0 0  0 1 0 0  0 1 0 0  1 0 1 1  0 1 0 0  0 1 0 1))) ; closest IEEE-754 number to 0.636018991
+
+(define psmallestd `(0 ,(list) (1)))
+(define plargestd `(0 ,(list) ,(make-list 23 1))); 2^-126 * (1-2^(-23))
 
 (define int-truncation-test
   (test-suite "Tests for integers on build-truncated-float.rkt"
@@ -9,21 +40,21 @@
               (test-case "One"
                          (check-equal? (build-truncated-float 1) one))
               (test-case "- One"
-                         (check-equal? (build-truncated-float -1) negone))
+                         (check-equal? (build-truncated-float -1) none))
               (test-case "Four"
                          (check-equal? (build-truncated-float 4) four))
               (test-case "- Four"
-                         (check-equal? (build-truncated-float -4) negfour))
+                         (check-equal? (build-truncated-float -4) nfour))
               (test-case "Seventy Two"
-                         (check-equal? (build-truncated-float 72) seventytwo))
+                         (check-equal? (build-truncated-float 72) p72))
               (test-case "- Seventy"
-                         (check-equal? (build-truncated-float -70) negseventy))
+                         (check-equal? (build-truncated-float -70) n70))
               (test-case "Forty Two"
-                         (check-equal? (build-truncated-float 42) fortytwo))
+                         (check-equal? (build-truncated-float 42) p42))
               (test-case "- Four Hundred Twenty One"
-                         (check-equal? (build-truncated-float -421) neg421))
+                         (check-equal? (build-truncated-float -421) n421))
               (test-case "Sixty"
-                         (check-equal? (build-truncated-float 60) sixty))
+                         (check-equal? (build-truncated-float 60) p60))
               (test-case "Two Thousand Forty Nine"
                          (check-equal? (build-truncated-float 2049) p2049))
 
@@ -42,8 +73,16 @@
               (test-case "- 45.125"
                          (check-equal? (build-truncated-float -45.125) n45.125))
               (test-case "- 1020.625"
-                         (check-equal? (build-truncated-float -1020.625) n1020.625))))
-
+                         (check-equal? (build-truncated-float -1020.625) n1020.625))
+              (test-case "0.9921875"
+                         (check-equal? (build-truncated-float 0.9921875) p0.9921875))
+              (test-case "0.555555522442"
+                         (check-equal? (build-truncated-float 0.555555522442) p0.555555522442))
+              (test-case "45.0000019073"
+                         (check-equal? (build-truncated-float 45.0000019073) p45)); This value is not representable by single. It should be rounded down to 45.
+              (test-case "2^-19"
+                         (check-equal? (build-truncated-float (expt 2 -19)) p0.00000190734))
+  ))
 (define normaldecimal-infinite-truncation-test
   (test-suite "Tests for normal decimals with infinite representations on build-truncated-float.rkt"
               (test-case "12.8"
