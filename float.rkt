@@ -2,15 +2,10 @@
 
 (provide reify reify-exp reify-frac reify-sign get-sign get-frac get-exp POS-INFINITY NEG-INFINITY qNaN sNaN FP-ERR)
 
-(define float-format '(
-                       b31
-                       'olegexponenntn ; little endian exp
-                       'oleg mantissa; little endian mantissa
-                      ))
 (define num '(;sign
               0 ; positive
               '(1 1 1 1 1 1 1 1) ;exponent ; first bit is the least significant
-              '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0) ; mantissa ; first bit is the least significant
+              '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) ; mantissa ; first bit is the least significant, always contains the leading one.
               )
 )
 
@@ -19,6 +14,7 @@
 
 ;Constants for the get-x functions
 (define EXP-LEN 8)
+(define N_BITS 24)
 (define MANTISSA-POS 9)
 
 ; Constants for floats that aren't numbers
@@ -57,7 +53,7 @@
   man: The mantissa bits of a MKFP number.
   Returns true if and only if all the exponent bits are 1 and if all the mantissa bits are 0. 
 |#
-(define (inf? exp man)       (and (equal? exp FULL-EXP) (equal? 0 (apply + man))))
+(define (inf? exp man)       (and (equal? exp FULL-EXP) (equal? 0 (apply + (take man (- N_BITS 1))))))
 
 #|
 (qNaN? exp man)
@@ -66,7 +62,7 @@
 
   Returns true iff all the exponent bits are 1 and the most significant bit of the mantissa is 1.
 |#
-(define (qNaN? exp man)       (and (equal? exp FULL-EXP) (equal? 1 (last man))))
+(define (qNaN? exp man)       (and (equal? exp FULL-EXP) (equal? 1 (first (take-right man 2)))))
 
 #|
 (sNaN? exp man)
@@ -75,7 +71,7 @@
 
   Returns true iff all the exponent bits are 1 and the most significant bit of the mantissa is 0 and there are other mantissa bits set to 1.
 |#
-(define (sNaN? exp man)       (and (equal? exp FULL-EXP) (not (equal? 0 (apply + man))) (equal? 0 (last man))))
+(define (sNaN? exp man)       (and (equal? exp FULL-EXP) (not (equal? 0 (apply + man))) (equal? 0 (first (take-right man 2)))))
 
 #|
 (zero? exp man)
@@ -99,11 +95,9 @@
   Returns the Racket float equivallent of what float mkfp refers to. 
 |#
 (define (reify mkfp)
-  (let* (
-         [sign       (reify-sign (get-sign mkfp))]
+  (let* ([sign       (reify-sign (get-sign mkfp))]
          [man        (get-frac mkfp)]
-         [stored-exp (get-exp mkfp)]
-        )
+         [stored-exp (get-exp mkfp)])
     (cond
       [(inf? stored-exp man) (cond
                                [(equal? 1 sign) POS-INFINITY]
@@ -112,15 +106,9 @@
       [(sNaN? stored-exp man) sNaN]
       [(subnormal? stored-exp man) (* sign (expt 2 -126) (reify-frac man))]
       [(zero? stored-exp man) 0]
-      [else (let* (
-                   [frac        (+ 1 (reify-frac man))]
-                   [shifted-exp (reify-exp stored-exp)]
-                  )
-              (* sign (expt 2 shifted-exp) frac)
-            )] 
-      )
-  )
-)
+      [else (let* ([frac        (reify-frac man)]
+                   [shifted-exp (reify-exp stored-exp)])
+              (* sign (expt 2 shifted-exp) frac))])))
 
 #|
 (binary-exponent-folder bit acc-pair)
