@@ -3,7 +3,7 @@
 (provide (all-defined-out))
                 
 
-;defined some fp numbers for testing
+;defined some fp-numbers for testing
 (define zero `(0 ,(build-num 0) ()))
 (define one `(0 ,(build-num 127) ,(append (make-list 23 0) '(1))))
 (define two `(0 (0 0 0 0 0 0 0 1) ,(append (make-list 23 0) '(1))))
