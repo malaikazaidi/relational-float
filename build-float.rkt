@@ -40,7 +40,6 @@
 (build-intbitlist z p)
   z: The integer being converted to a magnitude bitlist.
   p: The precision of the bitlist.
-
   Returns a pair (bitlist . exp)
   bitlist:
     - A bitlist representing the most significant bits of z using only p degrees of precision.
@@ -56,7 +55,6 @@
   p: The precision of the bitlist.
   bitlist: The bit accumulator for z.
   expo: The exponent accumulator for z.
-
   Returns the pair (bitlist' . expo') where bitlist is at most 24 bits long and expo'is the expooent
   of the most significant bit.
 |#
@@ -78,7 +76,6 @@
 (build-fracbitlist r p)
   r: The real numbered fraction being converted to a magnitude bitlist.
   p: The precision of the bitlist.
-
   Returns a pair (bitlist . exp)
   bitlist:
     - A bitlist representing the most significant bits of r using only p degrees of precision.
@@ -99,7 +96,6 @@
   bitlist: The current bitlist created so far.
   p: The precision.
   generate: A function that takes in a number and spits out a pair (residual . bit)
-
   Fills the rest of the precision left in the bitlist.
 |#
 (define/match (bitlist-filler bitlist p generate x) 
@@ -119,7 +115,6 @@
   generate: the advancing function.
   cap: The max number of times generate will be called.
   n: an accumulator that counts how many times generate was called.
-
   Returns the pair (x' . n') where x' is the result of calling generate n' times succesively.
   0 <= n' <= cap.
 |#
@@ -137,7 +132,6 @@
 #|
 (intbit-generator z)
   z: integer?
-
   Returns the pair (residual . bit). residual, bit and z satisfy: z = 2*(residual) + bit
 |#
 (define (intbit-generator z) (let*-values ([(q r) (quotient/remainder z 2)])
@@ -147,7 +141,6 @@
 #|
 (fracbit-generator r)
   r: and pos? real? (<= r 1)
-
   Returns the pair (residual . bit). residual and bit: residual = {2*r} && bit = floor(2 * r) 
 |#
 (define (fracbit-generator r) (let* ([double-r (* r 2)]
@@ -158,7 +151,6 @@
 #|
 (decompose-real r)
   r: A real number
-
   Return a three element list; (sign, int, frac) where:
     - sign: 0 if non-negative 1 if negative
     - int: The floor of the absolute value of r. (-4.5 -> 4)
@@ -177,7 +169,6 @@
 #|
 (build-truncated-float r)
   r: A racket float.
-
   Returns a MKFP representation of the floating point number r.
 |#
 (define (build-truncated-float r) 
@@ -231,4 +222,3 @@
                    [exp-n    (+ EXP_SHIFT intMSB-exp)]
                    [exponent (int-to-bitlist exp-n)])
                   (list sign exponent mantissa))])))
-
