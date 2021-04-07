@@ -1,5 +1,21 @@
 #lang racket
-(require rackunit rackunit/gui "float.rkt" "test-numbers.rkt" "numbers.rkt")
+(require rackunit rackunit/text-ui "float.rkt" "numbers.rkt")
+
+(define zero  `(0 ,(list) ,(list)))
+(define one   '(0 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
+(define p42   '(0 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 1 0 1)))
+(define n421  '(1 (1 1 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 1 0 0  1 0 1 1)))
+(define three '(0 (0 0 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 1 1)))
+(define p2^23 `(0 ,(build-num 104) ,(append (make-list 23 0) '(1))))
+(define p12.5     '(0 (0 1 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 0 1 1)))
+(define n45.125   '(1 (0 0 1 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1  0 0 1 0  1 1 0 1)))
+
+(define pinf `(0 (1 1 1 1 1 1 1 1) ,(append (make-list 23 0) '(1))))
+(define ninf `(1 (1 1 1 1 1 1 1 1) ,(append (make-list 23 0) '(1))))
+(define qnan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1))); Only most sig bit is important for distinguishing nans
+(define snan `(0 (1 1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1)))
+(define psmallestd `(0 ,(list) (1)))
+(define plargestd `(0 ,(list) ,(make-list 23 1))); 2^-126 * (1-2^(-23))
 
 (define reify-exp-tests
   (test-suite "Tests for reify-exp"
@@ -37,9 +53,9 @@
               (test-case "Given mkfp(0) -> 10"
                          (check = (reify zero) 0))
               (test-case "Given mkfp(-421) -> -421"
-                         (check = (reify neg421) -421))
+                         (check = (reify n421) -421))
               (test-case "Given mkfp(42) -> 42"
-                         (check = (reify fortytwo) 42))
+                         (check = (reify p42) 42))
               (test-case "Given mkfp(3) -> 3"
                          (check = (reify three) 3))
               (test-case "Given mkfp(12.5) -> 12.5"
@@ -67,4 +83,9 @@
                               reify-frac-tests
                               reify-tests))
 
-(test/gui all-tests #:wait? #t)
+(run-tests reify-exp-tests)
+(run-tests reify-sign-tests)
+(run-tests reify-frac-tests)
+(run-tests reify-tests)
+;(run-tests all-tests)
+
