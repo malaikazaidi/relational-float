@@ -28,8 +28,8 @@
         (test/fp-relation-r "2 + ? = 3" one : (fp-pluso two x three) (x))
         (test/fp-relation-r "? + 2 = 3" one : (fp-pluso x two three) (x))
 
-        #;(test/fp-relation-r "-421 + ? = -422" negone : (fp-pluso neg421 x n422) (x)) ; these take ridculously long +15 minutes, answer not aquired
-        #;(test/fp-relation-r "? + -421 = -422" negone : (fp-pluso x neg421 n422) (x))
+        (test/fp-relation-r "-421 + ? = -422" negone : (fp-pluso neg421 x n422) (x)) ; these take ridculously long +15 minutes, answer not aquired
+        (test/fp-relation-r "? + -421 = -422" negone : (fp-pluso x neg421 n422) (x)) ;DOESN'T TAKE LONG NOW :)
               ))
 
 (define nonequal-signs-test
@@ -39,13 +39,13 @@
         (test/fp-relation-r "4 + (-1) = ?" three : (fp-pluso four negone x) (x))
         (test/fp-relation-r "2 + (-1) = ?" one : (fp-pluso two negone x) (x))
         (test/fp-relation-r "(-42) + 4 = ?" n38 : (fp-pluso nfortytwo four x) (x))
-        #;(test/fp-relation-r "(-72) + 60 = ?" n12 : (fp-pluso nseventytwo sixty x) (x)) ;takes really long, doesn't give a response
-        #;(test/fp-relation-r "(-421) + 1 = ?" n420 : (fp-pluso neg421 one x) (x)) ;takes really long, doesn't give a response
+        (test/fp-relation-r "(-72) + 60 = ?" n12 : (fp-pluso nseventytwo sixty x) (x)) ;takes really long, doesn't give a response
+        (test/fp-relation-r "(-421) + 1 = ?" n420 : (fp-pluso neg421 one x) (x)) ;takes really long, doesn't give a response
         (test/fp-relation-r "2 + ? = 1" negone : (fp-pluso two x one) (x))
         (test/fp-relation-r "? + 2 = -2" negfour : (fp-pluso x two ntwo) (x))
-        #;(test/fp-relation-r "42 + ? = 38" negfour : (fp-pluso fortytwo x p38) (x)) ;Takes really long, doesn't give a response
-        #;(test/fp-relation-r "? + 42 = 38" negfour : (fp-pluso x fortytwo p38) (x)) ;Takes really long, doesn't give a response
-        #;(test/fp-relation-r "72 + ? = 70" ntwo : (fp-pluso seventytwo x seventy) (x)) ;Takes really long, doesn't give a response
+        (test/fp-relation-r "42 + ? = 38" negfour : (fp-pluso fortytwo x p38) (x)) ;Takes really long, doesn't give a response
+        (test/fp-relation-r "? + 42 = 38" negfour : (fp-pluso x fortytwo p38) (x)) ;Takes really long, doesn't give a response
+        (test/fp-relation-r "72 + ? = 70" ntwo : (fp-pluso seventytwo x seventy) (x)) ;Takes really long, doesn't give a response
         (test/fp-relation-r "(-4) + x = -3" one : (fp-pluso negfour x nthree) (x))
         (test/fp-relation-r "x + (-4) = -3" one : (fp-pluso x negfour nthree) (x))
         (test/fp-relation-r "4.5 + -7 = ?" n2.5 : (fp-pluso p4.5 n7 x) (x))
@@ -54,5 +54,5 @@
 
 (displayln "Tests for same sign fp numbers")
 (run-tests equal-signs-test)
-;(displayln "Tests for different sign fp numbers")
-;(run-tests nonequal-signs-test)
+(displayln "Tests for different sign fp numbers")
+(run-tests nonequal-signs-test)
