@@ -31,34 +31,6 @@
     (test/fp-relation-r "4.5 * (-7) = ?" n31.5 : (fp-multo p4.5 n7 x) (x))
     #;(test/fp-relation-r "(-10.12) * 4.6 = ?" n46.552 : (fp-multo n10.12 p4.6 x) (x)) ;unrepresentable
     #;(test/fp-relation-r "4.5 * (-6.3) = ?" n28.35 : (fp-multo p4.5 n6.3 x) (x)) ;unrepresentable
-
-            ;   (test-case "1*(-4)"
-            ;              (check-equal? (first (run 1 (x) (fp-multo one negfour x))) (build-truncated-float -4)))
-            ;   (test-case "2*(-1)"
-            ;              (check-equal? (first (run 1 (x) (fp-multo two negone x))) (build-truncated-float -2)))
-            ;   (test-case "(-42)*4"
-            ;              (check-equal? (first(run 1 (x) (fp-multo nfortytwo four x))) (build-truncated-float -168)))
-            ;   (test-case "(-72)*60"
-            ;              (check-equal? (first(run 1 (x) (fp-multo nseventytwo sixty x))) (build-truncated-float -4320)))
-            ;   (test-case "4 * -1"
-            ;              (check-equal? (first(run 1 (x) (fp-multo four negone x))) (build-truncated-float -4)))
-            ;   (test-case "-421 * 1"
-            ;              (check-equal? (first(run 1 (x) (fp-multo neg421 one x))) (build-truncated-float -421)))
-            
-            ;   (test-case "2*x = -2"
-            ;              (check-equal? (first (run 1 (x) (fp-multo two x (build-truncated-float -2)))) negone))
-            
-            ;   (test-case "x*2 = -6"
-            ;              (check-equal? (first (run 1 (x) (fp-multo x two (build-truncated-float -6)))) (build-truncated-float -3)))
-              
-            ;   (test-case "4.5 * -7 = -31.5"
-            ;              (check-equal? (first(run 1 (x) (fp-multo (build-truncated-float 4.5) (build-truncated-float -7) x))) (build-truncated-float -31.5)))
-              
-            ;   #;(test-case "-10.12 * 4.6 = -46.552"
-            ;              (check-equal? (first(run 1 (x) (fp-multo (build-truncated-float -10.12) (build-truncated-float 4.6) x))) (build-truncated-float -46.552)))
-            ;   #;(test-case "4.5 * -6.3 = -28.35"
-            ;              (check-equal? (first(run 1 (x) (fp-multo (build-truncated-float 4.5) (build-truncated-float -6.3) x))) (build-truncated-float -28.35)))
-
               ))
 
 (displayln "Tests for same sign fp numbers")
