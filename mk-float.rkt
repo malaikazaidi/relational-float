@@ -99,18 +99,6 @@ Shifts exponent
   
   
 #|
-Shifts exponent for denormalized nums
-|# 
-(define (shift-expod man-sum exp exp-sum)
-  (conde ((== man-sum '())
-          (== exp exp-sum))
-         ((<o (build-num 8388607) man-sum)
-          (pluso exp '(1) exp-sum))
-         ((=/= man-sum '())
-          (<=o man-sum (build-num 8388607))
-          (== exp exp-sum))))
-        
-#|
 Negates sign
 |#  
 (define (negsigno sign nsign)
@@ -129,8 +117,8 @@ Adding leading bit to mantissa.
           (appendo man '(1) r))))
 
 (define (frac-lengtho m)
-  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24)
-         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24))
+  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16)
+         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16))
          ))
 
 #|
