@@ -1,7 +1,7 @@
 #lang racket
 
 (require "mk.rkt")
-(require "numbers.rkt")
+#;(require "numbers.rkt")
 (require "mk-float.rkt")
 (define one
   '(0 (1 1 1 1 1 1 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
@@ -10,18 +10,21 @@
 (define four
   '(0 (1 0 0 0 0 0 0 1) (0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1)))
 
-(displayln "x+y=1")
-(time (run 1 (m1 m2) (fp-pluso
+
+(displayln "x*y=1")
+(time (run 1 (m1 m2) (fp-multo
                   m1
                   m2
-                  one)))
-(displayln "x+1=y")
-(time (run 1 (m1 m2) (fp-pluso
+                  two)))
+#|
+(displayln "x*1=y")
+(time (run 1 (m1 m2) (fp-multo
                   m1
                   one
                   m2)))
-(displayln "1+x=y")
-(time (run 1 (m1 m2) (fp-pluso
+(displayln "1*x=y")
+(time (run 1 (m1 m2) (fp-multo
                   one
                   m1
                   m2)))
+|#

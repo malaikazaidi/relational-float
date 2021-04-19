@@ -211,7 +211,7 @@ Floating-Point Addition for same signs
          (== sign1 sign2)
          (== rsign sign1)
          ;shift the frac of the SMALLER exponent
-         (correct-shifto-2 frac1 expo-diff shifted-frac1 1)
+         (correct-shifto-2 frac1 expo-diff shifted-frac1)
          ; exponent shift
          (shift-expo frac2 frac-sum expo2 rexpo)
                   
