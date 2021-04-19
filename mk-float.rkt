@@ -4,7 +4,7 @@
 (require "numbers.rkt")
 (require "test-numbers.rkt")
 (require "build-float.rkt")
-(provide fp-pluso fp-multo)
+(provide fp-pluso fp-multo frac-lengtho)
 
 (define BIAS (build-num 127))
 
@@ -77,10 +77,32 @@ Shifts the exponent. Removes least sig bits
          ((poso n)
           (fresh (shifted-frac n-minus-1 bit)
                  (== frac (cons bit shifted-frac))
-                 (pluso n-minus-1 '(1) n)
+                 (pluso '(1) n-minus-1 n) ;Shifted addends
                  (correct-shifto shifted-frac n-minus-1 result)
                  ))))
 
+(define (correct-shifto-2 frac n result curr-digit)
+  (conde ((== n '())
+          (== frac result))
+         ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-digit)
+            (== n (cons n-first n-rest))
+            (conde ((== n-first 0)
+                    (== frac tmp))
+                   ((== n-first 1)
+                    (conde
+                        ((== curr-digit 1) ; remove 1 digit
+                         (== frac (cons b1 tmp)))
+                        ((== curr-digit 2) ; remove 2 digit
+                         (== frac `(,b1 ,b2 . ,tmp)))
+                        ((== curr-digit 3) ; remove 4 digits
+                         (== frac `(,b1 ,b2 ,b3 ,b4 . ,tmp)))
+                        ((== curr-digit 4) ; remove 8 digits
+                         (== frac `(,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 ,b8 . ,tmp))))))
+            (conde ((== curr-digit 1) (== next-digit 2))
+                   ((== curr-digit 2) (== next-digit 3))
+                   ((== curr-digit 3) (== next-digit 4))
+                   ((== curr-digit 4) (== next-digit 5)))
+            (correct-shifto-2 tmp n-rest result next-digit)))))
 
 #|
 Shifts exponent
@@ -91,7 +113,7 @@ Shifts exponent
           (== exp exp-sum))
          ((== man '())
           (=/= man-sum '())
-          (pluso exp '(1) exp-sum))
+          (pluso '(1) exp exp-sum))
          ((fresh (manfst manrst man-sumfst man-sumrst)
                  (== man (cons manfst manrst))
                  (== man-sum (cons man-sumfst man-sumrst))
@@ -189,7 +211,7 @@ Floating-Point Addition for same signs
          (== sign1 sign2)
          (== rsign sign1)
          ;shift the frac of the SMALLER exponent
-         (correct-shifto frac1 expo-diff shifted-frac1)
+         (correct-shifto-2 frac1 expo-diff shifted-frac1 1)
          ; exponent shift
          (shift-expo frac2 frac-sum expo2 rexpo)
                   
@@ -207,13 +229,10 @@ swaps the order of parameters
 (define (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
   (fresh (expo-diff)  
          (conde
-          ((== expo1 expo2)
-           (fp-samesignaddero sign2 expo2 frac2 sign1 expo1 frac1 '() rsign rexpo rfrac))
-          ((=/= expo1 expo2)
-           (pluso expo1 expo-diff expo2)
+          ((pluso expo-diff expo1 expo2)
            (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac))
           ((=/= expo1 expo2)
-           (pluso expo2 expo-diff expo1)
+           (pluso expo-diff expo2 expo1)
            (fp-samesignaddero sign2 expo2 frac2 sign1 expo1 frac1 expo-diff rsign rexpo rfrac))
           ))
   )
