@@ -165,10 +165,10 @@
         (test/fp-relation-r "-4 + -1 = ?" n5 : (fp-pluso negfour negone x) (x))
         (test/fp-relation-r "-4 + -70 = ?" n74 : (fp-pluso negfour negseventy x) (x))
         (test/fp-relation-r "-421 + -1 = ?" n422 : (fp-pluso neg421 negone x) (x))
-        (test/fp-relation-r "2.5 + 3 = ?" p5.5 : (fp-pluso p2.5 three x) (x))
-        (test/fp-relation-r "2.5 + 3.25 = ?" p5.75 : (fp-pluso p2.5 p3.25 x) (x))
-        (test/fp-relation-r "1.05 + 3.2325 = ?" p4.2825 : (fp-pluso p1.05 p3.2325 x) (x))
-        (test/fp-relation-r "-4 + -9 = ?" n13 :(fp-pluso negfour n9 x) (x))
+        ;(test/fp-relation-r "2.5 + 3 = ?" p5.5 : (fp-pluso p2.5 three x) (x))
+        ;(test/fp-relation-r "2.5 + 3.25 = ?" p5.75 : (fp-pluso p2.5 p3.25 x) (x))
+        ;(test/fp-relation-r "1.05 + 3.2325 = ?" p4.2825 : (fp-pluso p1.05 p3.2325 x) (x))
+        ;(test/fp-relation-r "-4 + -9 = ?" n13 :(fp-pluso negfour n9 x) (x))
 
         (test/fp-relation-r "2 + ? = 3" one : (fp-pluso two x three) (x))
         (test/fp-relation-r "? + 2 = 3" one : (fp-pluso x two three) (x))
@@ -180,8 +180,8 @@
         (test/fp-relation-r "? + -4 = -5" negone : (fp-pluso x negfour n5) (x))
         #;(test/fp-relation-r "-421 + ? = -422" negone : (fp-pluso neg421 x n422) (x)) ; these take ridculously long +15 minutes
         #;(test/fp-relation-r "? + -421 = -422" negone : (fp-pluso x neg421 n422) (x))
-        (test/fp-relation-r "-10.12 + ? = -33.365" n23.245 : (fp-pluso n10.12 x n33.365) (x))
-        (test/fp-relation-r "? + -10.12 = -33.365" n23.245 : (fp-pluso x n10.12 n33.365) (x))
+        ;(test/fp-relation-r "-10.12 + ? = -33.365" n23.245 : (fp-pluso n10.12 x n33.365) (x))
+        ;(test/fp-relation-r "? + -10.12 = -33.365" n23.245 : (fp-pluso x n10.12 n33.365) (x))
     ))
 
 ;(run-tests test 'verbose)
