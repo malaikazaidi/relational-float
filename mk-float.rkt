@@ -4,7 +4,7 @@
 (require "numbers.rkt")
 (require "test-numbers.rkt")
 (require "build-float.rkt")
-(provide fp-pluso fp-multo frac-lengtho)
+(provide fp-pluso fp-multo frac-lengtho exponento)
 
 (define BIAS (build-num 127))
 
@@ -25,6 +25,17 @@
   (fresh (sign expo)
          (== f (list sign expo frac))))
 
+#|
+(not-specialvalo fp)
+
+Checks if fp does not represent an infinity/NaN (i.e a special value).
+|#
+(define (not-specialvalo fp)
+    (fresh (sign expo frac)
+        (fp-decompo fp sign expo frac)
+        (=/= expo '(1 1 1 1  1 1 1 1))
+    ) 
+) 
 
 #|
 Drops most significant bit in the mantissa.
@@ -149,9 +160,17 @@ Adds 2 exponents and subtracts bias (127)
 (define (shifted-pluso expo1 expo2 rexpo)
   (fresh (exposum) 
          (pluso expo1 expo2 exposum)
-         (pluso rexpo BIAS exposum)
+         (pluso BIAS rexpo exposum)
          )
   )
+
+#|
+Ensures that the exponent length is no more than 8.
+|#
+(define (exponento expo) 
+   (fresh (a b b0 b1 b2 b3 b4 b5 b6 b7)
+        (== b (list b0 b1 b2 b3 b4 b5 b6 b7))
+        (appendo expo a b)))
 
 ; add constraint for -zero and +zero to be equal to one another.
 (define (fp-<= f1 f2)
@@ -211,7 +230,7 @@ Floating-Point Addition for same signs
          (== sign1 sign2)
          (== rsign sign1)
          ;shift the frac of the SMALLER exponent
-         (correct-shifto-2 frac1 expo-diff shifted-frac1)
+         (correct-shifto-2 frac1 expo-diff shifted-frac1 1)
          ; exponent shift
          (shift-expo frac2 frac-sum expo2 rexpo)
                   
@@ -287,30 +306,55 @@ Performs and operation on bit1 and bit2. Outputs an Oleg number.
 Normalizes the exponent.
 |#
 
-(define (mult-expo-normalize pre-expo man1 man2 manr rexpo)
-  (fresh (man1man2)
-         (appendo man1 man2 man1man2)
-         (mult-check-lengtho man1man2 manr pre-expo rexpo)
-         )
-  )
-#|
-Checks if exponent needs to be normalized or not according to the length.
-|#
-(define (mult-check-lengtho man1man2 manr pre-expo rexpo)
-  (conde ((== manr '())
-          (== man1man2 manr)
-          (pluso '(1) pre-expo rexpo))
-         ((== manr '())
-          (=/= man1man2 manr)
-          (== pre-expo rexpo))
-         ((=/= manr '())
-          (fresh (b1 b2 restmanr restman1man2)
-                 (== man1man2 (cons b1 restman1man2))
-                 (== manr (cons b2 restmanr))
-                 (mult-check-lengtho restman1man2 restmanr pre-expo rexpo)
-                 ))
-         )
-  )
+(define (mult-expo-normalize pre-expo pre-fracr rexpo)
+    (fresh (a b b-first b-rest rem temp)
+        ; a and b have the same length as pre-fracr
+        (frac-lengtho a)
+        (frac-lengtho b)
+
+        ; Decompose b into its first bit and remaining bits.
+        (== b (cons b-first b-rest))
+
+        ; Decompose pre-frac r into (a) ++ (b-rest) ++ (rem) 
+        ; (a) ++ (b-rest) length = 16 + 15 = 31 bits
+        (appendo a b-rest temp)
+        (appendo temp rem pre-fracr)
+
+        ; rem == '()  --> length pre-fracr = 31
+        ; rem =/= '() --> length pre-fracr >= 32
+        (conde 
+            ((== rem '())
+             (== pre-expo rexpo))
+            ((=/= rem '())
+             (pluso '(1) pre-expo rexpo))
+        )
+    )
+)
+
+; (define (mult-expo-normalize pre-expo man1 man2 manr rexpo)
+;   (fresh (man1man2)
+;          (appendo man1 man2 man1man2)
+;          (mult-check-lengtho man1man2 manr pre-expo rexpo)
+;          )
+;   )
+; #|
+; Checks if exponent needs to be normalized or not according to the length.
+; |#
+; (define (mult-check-lengtho man1man2 manr pre-expo rexpo)
+;   (conde ((== manr '())
+;           (== man1man2 manr)
+;           (pluso '(1) pre-expo rexpo))
+;          ((== manr '())
+;           (=/= man1man2 manr)
+;           (== pre-expo rexpo))
+;          ((=/= manr '())
+;           (fresh (b1 b2 restmanr restman1man2)
+;                  (== man1man2 (cons b1 restman1man2))
+;                  (== manr (cons b2 restmanr))
+;                  (mult-check-lengtho restman1man2 restmanr pre-expo rexpo)
+;                  ))
+;          )
+;   )
 
 #|
  XOR relation
@@ -335,12 +379,19 @@ Floating-Point Multiplication
          (frac-lengtho frac2)
          (== r (list rsign rexpo rfrac))
          (frac-lengtho rfrac)
+
+         (not-specialvalo f1)
+         (not-specialvalo f2)
          
          (xoro sign1 sign2 rsign)
          (drop-leastsig-bito pre-fracr rfrac)
-         (mult-expo-normalize pre-rexpo frac1 frac2 pre-fracr rexpo)
+         
+         (mult-expo-normalize pre-rexpo pre-fracr rexpo)
          
          (*o frac1 frac2 pre-fracr)
          (shifted-pluso expo1 expo2 pre-rexpo)
 
+         (exponento expo1)
+         (exponento expo2)
+         (exponento rexpo)
          ))
