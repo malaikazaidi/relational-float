@@ -2,6 +2,7 @@
 
 (provide build-truncated-float)
 
+(define PRECISION 16)
 (define SINGLE_P 24); + 1 to include hidden bit.
 
 (define SMALLEST_PRECISION_EXP 149)
@@ -84,7 +85,7 @@
     - The exponent of the most significant bit.
 |#
 (define (build-fracbitlist r p) 
-      (let* ([advance-pair (advance-to-leading-bit r fracbit-generator 0 (- SMALLEST_PRECISION_EXP SINGLE_P))]; Advance no more than 125 positions
+      (let* ([advance-pair (advance-to-leading-bit r fracbit-generator 0 (- SMALLEST_PRECISION_EXP p))]; Advance no more than SMALLEST_PRECISION_EXP - p positions (when single this is 125 = 149-24)
              [advanced-r   (car advance-pair)]; Either the x that will generate the leading 1 or the x that generates the 126th 0.
              [n-calls      (cdr advance-pair)]
              [bitlist      (bitlist-filler '() p fracbit-generator advanced-r)])
@@ -165,34 +166,28 @@
         
         (list sign int frac)))
 
-
-#|
-(build-truncated-float r)
-  r: A racket float.
-  Returns a MKFP representation of the floating point number r.
-|#
-(define (build-truncated-float r) 
-  (let* 
-    ([sign-int-frac     (decompose-real r)]
-     [sign              (first sign-int-frac)]
-     [integer-part      (second sign-int-frac)]
-     [fractional-part   (third sign-int-frac)]
-
-     [intbitlist-pair     (build-intbitlist integer-part SINGLE_P)]
-     [binary-integer      (car intbitlist-pair)]
-     [intMSB-exp          (cdr intbitlist-pair)]
-     [integer-bitlength   (+ intMSB-exp 1)]); The number of bits it takes to fully represent the integer part.
+(define (build-truncated-float-helper r p)
+    (let* 
+        ([sign-int-frac   (decompose-real r)]
+         [sign            (first sign-int-frac)]
+         [integer-part    (second sign-int-frac)]
+         [fractional-part (third sign-int-frac)]
+         
+         [intbitlist-pair   (build-intbitlist integer-part p)]
+         [binary-integer    (car intbitlist-pair)]
+         [intMSB-exp        (cdr intbitlist-pair)]
+         [integer-bitlength (+ intMSB-exp 1)])
      (cond
-      [(>= intMSB-exp SINGLE_P) (let* ([exp-n    (+ EXP_SHIFT intMSB-exp)]
+      [(>= intMSB-exp p) (let* ([exp-n (+ EXP_SHIFT intMSB-exp)]
                                        [exponent (int-to-bitlist exp-n)])
 
-                                    (list sign exponent binary-integer))]; We know we are dealing with a pure integer.
+                                    (list sign exponent binary-integer))] ; We know we are dealing with a pure integer.
 
-      [(equal? intMSB-exp -1) (let* ([frac-pair   (build-fracbitlist fractional-part SINGLE_P)]; need 24 bits, Dealing with a pure fraction.
+      [(equal? intMSB-exp -1) (let* ([frac-pair   (build-fracbitlist fractional-part p)]; need p bits, Dealing with a pure fraction.
                                      [frac        (car frac-pair)]
                                      [fracMSB-exp (cdr frac-pair)]
 
-                                     [denormal? (and (equal? (last frac) 0) (equal? (- EXP_SHIFT 1) fracMSB-exp))]
+                                     [denormal? (and (equal? (last frac) 0) (equal? (+ (- SMALLEST_PRECISION_EXP p) 1) fracMSB-exp))]
                                      [adjusted-fracMSB-exp (if denormal?
                                                                (+ fracMSB-exp 1)
                                                                fracMSB-exp)]
@@ -204,9 +199,9 @@
                                      [exp-n    (- EXP_SHIFT adjusted-fracMSB-exp)]
                                      [exponent (int-to-bitlist exp-n)])
 
-                                    (list sign exponent adjusted-frac))];We know we are dealing with a pure fraction.
+                                    (list sign exponent adjusted-frac))]
 
-      [else (let* ([remaining-bits (- SINGLE_P integer-bitlength)]; 24 - #of integer bits
+      [else (let* ([remaining-bits (- p integer-bitlength)]; p - #of integer bits
                    [frac-pair     (build-fracbitlist fractional-part remaining-bits)]; need the remianing-precision bits.
                    [frac          (car frac-pair)]; Extract the computed fraction.
                    [fracMSB-exp   (cdr frac-pair)]; Extract the exponent of the most significant bit from the fractional part.
@@ -221,4 +216,13 @@
                    [mantissa (append frac-mantissa binary-integer)]
                    [exp-n    (+ EXP_SHIFT intMSB-exp)]
                    [exponent (int-to-bitlist exp-n)])
-                  (list sign exponent mantissa))])))
+                  (list sign exponent mantissa))]))
+)
+
+#|
+(build-truncated-float r)
+  r: A racket float.
+  Returns a MKFP representation of the floating point number r.
+|#
+(define (build-truncated-float r) 
+    (build-truncated-float-helper r PRECISION))
