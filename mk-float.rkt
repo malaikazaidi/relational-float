@@ -81,17 +81,8 @@ Shifts the exponent.
 #|
 Shifts the exponent. Removes least sig bits
 |# 
-(define (correct-shifto frac n result)
-  (conde ((zeroo n)
-          (== frac result))
-         ((poso n)
-          (fresh (shifted-frac n-minus-1 bit)
-                 (== frac (cons bit shifted-frac))
-                 (pluso '(1) n-minus-1 n) ;Shifted addends
-                 (correct-shifto shifted-frac n-minus-1 result)
-                 ))))
 
-(define (correct-shifto-2 frac n result curr-digit)
+(define (correct-shifto frac n result curr-digit)
   (conde ((== n '())
           (== frac result))
          ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-digit)
@@ -112,7 +103,7 @@ Shifts the exponent. Removes least sig bits
                    ((== curr-digit 2) (== next-digit 3))
                    ((== curr-digit 3) (== next-digit 4))
                    ((== curr-digit 4) (== next-digit 5)))
-            (correct-shifto-2 tmp n-rest result next-digit)))))
+            (correct-shifto tmp n-rest result next-digit)))))
 
 #|
 Shifts exponent
@@ -229,7 +220,7 @@ Floating-Point Addition for same signs
          (== sign1 sign2)
          (== rsign sign1)
          ;shift the frac of the SMALLER exponent
-         (correct-shifto-2 frac1 expo-diff shifted-frac1 1)
+         (correct-shifto frac1 expo-diff shifted-frac1 1)
          ; exponent shift
          (shift-expo frac2 frac-sum expo2 rexpo)
                   
@@ -330,30 +321,6 @@ Normalizes the exponent.
     )
 )
 
-; (define (mult-expo-normalize pre-expo man1 man2 manr rexpo)
-;   (fresh (man1man2)
-;          (appendo man1 man2 man1man2)
-;          (mult-check-lengtho man1man2 manr pre-expo rexpo)
-;          )
-;   )
-; #|
-; Checks if exponent needs to be normalized or not according to the length.
-; |#
-; (define (mult-check-lengtho man1man2 manr pre-expo rexpo)
-;   (conde ((== manr '())
-;           (== man1man2 manr)
-;           (pluso '(1) pre-expo rexpo))
-;          ((== manr '())
-;           (=/= man1man2 manr)
-;           (== pre-expo rexpo))
-;          ((=/= manr '())
-;           (fresh (b1 b2 restmanr restman1man2)
-;                  (== man1man2 (cons b1 restman1man2))
-;                  (== manr (cons b2 restmanr))
-;                  (mult-check-lengtho restman1man2 restmanr pre-expo rexpo)
-;                  ))
-;          )
-;   )
 
 #|
  XOR relation
