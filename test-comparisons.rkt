@@ -15,6 +15,10 @@
     (time (test-equal? "1 < 2 = ?" (run 1 (x) (fp-< one two)) '(_.0)))
     (displayln (string-append "\n" "Running: " "4.5 < 4.6 = ?"))
     (time (test-equal? "4.5 < 4.6 = ?" (run 1 (x) (fp-< p4.5 p4.6)) '(_.0)))
+    (displayln (string-append "\n" "Running: " "-3.25 < 4.6 = ?"))
+    (time (test-equal? "-3.25 < 4.6 = ?" (run 1 (x) (fp-< n3.25 p4.6)) '(_.0)))
+    (displayln (string-append "\n" "Running: " "-3.25 < -3.25 = ?"))
+    (time (test-equal? "4.6 < -3.25 = ?" (run 1 (x) (fp-< p4.6 n3.25)) '()))
     ))
   
 
