@@ -4,7 +4,8 @@
 (require "numbers.rkt")
 (require "test-numbers.rkt")
 (require "build-float.rkt")
-(provide fp-pluso fp-multo frac-lengtho exponento)
+(require rackunit rackunit/text-ui)
+(provide fp-pluso fp-multo frac-lengtho exponento fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
 
