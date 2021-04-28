@@ -47,14 +47,12 @@
 (define p38 `(0 ,(build-num 132) ( 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 1)))
 (define n12 `(1 ,(build-num 130) ( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1)))
 (define n420 `(1 ,(build-num 135) ( 0 0 0 0 0 0 0 0 0 1 0 0 1 0 1 1)))
-;commented for now until lucas finished the buildtruncated float function
-#;(
 (define p5.5 (build-truncated-float 5.5))
 (define n5.5 (build-truncated-float -5.5))
 (define p4.5 (build-truncated-float 4.5))
 (define p4.6 (build-truncated-float 4.6))
 (define p2.5 (build-truncated-float 2.5))
-;(define n2.5 (build-truncated-float -2.5))
+(define n2.5 (build-truncated-float -2.5))
 (define n2.25 (build-truncated-float -2.25))
 (define p2.25 (build-truncated-float 2.25))
 (define p5.75 (build-truncated-float 5.75))
@@ -84,4 +82,4 @@
 (define p36 (build-truncated-float 36))
 (define n46.552 (build-truncated-float -46.552))
 (define n6.3 (build-truncated-float -6.3))
-(define n28.35 (build-truncated-float -28.35)))
+(define n28.35 (build-truncated-float -28.35))
