@@ -360,5 +360,4 @@ Floating-Point Multiplication
 
          (exponento expo1)
          (exponento expo2)
-         (exponento rexpo)
-         ))
+         (exponento rexpo)))

@@ -2,38 +2,104 @@
 (require rackunit rackunit/text-ui "mk-float.rkt" "test-numbers.rkt" "test.rkt")
 
 (define equal-signs-test
-  (test-suite "Tests for fp numbers that have equal signs" ;(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...))
-    (test/fp-relation-r "1 * 1 = ?" one : (fp-multo one one x) (x))
-    (test/fp-relation-r "2 * 1 = ?" two : (fp-multo two one x) (x))
-    (test/fp-relation-r "3 * 3 = ?" p9 : (fp-multo three three x) (x))
-    (test/fp-relation-r "42 * 4 = ?" p168 : (fp-multo fortytwo four x) (x))
-    (test/fp-relation-r "72 * 60 = ?" p4320 : (fp-multo seventytwo sixty x) (x))
-    (test/fp-relation-r "(-4) * (-1) = ?" four : (fp-multo negfour negone x) (x))
-    (test/fp-relation-r "(-4) * (-70) = ?" p280 : (fp-multo negfour negseventy x) (x))
-    (test/fp-relation-r "(-421) * (-1) = ?" p421 : (fp-multo neg421 negone x) (x))
+    (test-suite "Tests for fp numbers that have equal signs" ;(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...))
 
-    (test/fp-relation-r "2 * ? = 6" three : (fp-multo two x p6) (x))
-    (test/fp-relation-r "? * 2 = 6" three : (fp-multo x two p6) (x))
-    (test/fp-relation-r "2.5 * 3 = ?" p7.5 : (fp-multo p2.5 three x) (x))
-    (test/fp-relation-r "2.5 * 3.25 = ?" p8.125 : (fp-multo p2.5 p3.25 x) (x))
-    (test/fp-relation-r "(-4) * (-9) = ?" p36 : (fp-multo negfour n9 x) (x))))
+        (test/fp-relation-r "1 * 1 = ?" ((fp-multo one one x) (x))
+            (check-results-fp-equal? 'results one))
+
+        (test/fp-relation-r "2 * 1 = ?" ((fp-multo two one x) (x))
+            (check-results-fp-equal? 'results two))
+        
+        (test/fp-relation-r "3 * 3 = ?" ((fp-multo three three x) (x))
+            (check-results-fp-equal? 'results p9))
+        
+        (test/fp-relation-r "42 * 4 = ?" ((fp-multo fortytwo four x) (x))
+            (check-results-fp-equal? 'results p168))
+        
+        (test/fp-relation-r "72 * 60 = ?" ((fp-multo seventytwo sixty x) (x))
+            (check-results-fp-equal? 'results p4320))
+        
+        (test/fp-relation-r "(-4) * (-1) = ?" ((fp-multo negfour negone x) (x))
+            (check-results-fp-equal? 'results four))
+        
+        (test/fp-relation-r "(-4) * (-70) = ?" ((fp-multo negfour negseventy x) (x))
+            (check-results-fp-equal? 'results p280))
+
+        (test/fp-relation-r "(-421) * (-1) = ?" ((fp-multo neg421 negone x) (x))
+            (check-results-fp-equal? 'results p421))
+
+
+        (test/fp-relation-r "2 * ? = 6" ((fp-multo two x p6) (x))
+            (check-results-fp-equal? 'results three))
+
+        (test/fp-relation-r "? * 2 = 6" ((fp-multo x two p6) (x))
+            (check-results-fp-equal? 'results three))
+
+        (test/fp-relation-r "2.5 * 3 = ?" ((fp-multo p2.5 three x) (x))
+            (check-results-fp-equal? 'results p7.5))
+        
+        (test/fp-relation-r "2.5 * 3.25 = ?" ((fp-multo p2.5 p3.25 x) (x))
+            (check-results-fp-equal? 'results p8.125))
+
+        (test/fp-relation-r "(-4) * (-9) = ?" ((fp-multo negfour n9 x) (x))
+            (check-results-fp-equal? 'results p36))))
 
 (define nonequal-signs-test
-  (test-suite "Tests for fp numbers that have different signs"
-    (test/fp-relation-r "1 * (-4) = ?" negfour : (fp-multo one negfour x) (x))
-    (test/fp-relation-r "4 * (-1) = ?" negfour : (fp-multo four negone x) (x))
-    (test/fp-relation-r "2 * (-1) = ?" ntwo : (fp-multo two negone x) (x))
-    (test/fp-relation-r "(-42) * 4 = ?" n168 : (fp-multo nfortytwo four x) (x))
-    (test/fp-relation-r "(-72) * 60 = ?" n4320 : (fp-multo nseventytwo sixty x) (x))
-    (test/fp-relation-r "(-421) * 1 = ?" neg421 : (fp-multo neg421 one x) (x))
-    (test/fp-relation-r "2 * ? = (-2)" negone : (fp-multo two x ntwo) (x))
-    (test/fp-relation-r "? * 2 = (-6)" nthree : (fp-multo x two n6) (x))
-    (test/fp-relation-r "4.5 * (-7) = ?" n31.5 : (fp-multo p4.5 n7 x) (x))
-    #;(test/fp-relation-r "(-10.12) * 4.6 = ?" n46.552 : (fp-multo n10.12 p4.6 x) (x)) ;unrepresentable
-    #;(test/fp-relation-r "4.5 * (-6.3) = ?" n28.35 : (fp-multo p4.5 n6.3 x) (x)) ;unrepresentable
-              ))
+    (test-suite "Tests for fp numbers that have different signs"
+  
+        (test/fp-relation-r "1 * (-4) = ?" ((fp-multo one negfour x) (x))
+            (check-results-fp-equal? 'results negfour))
+            
+        (test/fp-relation-r "4 * (-1) = ?" ((fp-multo four negone x) (x))
+            (check-results-fp-equal? 'results negfour))
+            
+        (test/fp-relation-r "2 * (-1) = ?" ((fp-multo two negone x) (x))
+            (check-results-fp-equal? 'results ntwo))
+            
+        (test/fp-relation-r "(-42) * 4 = ?" ((fp-multo nfortytwo four x) (x))
+            (check-results-fp-equal? 'results n168))
+            
+        (test/fp-relation-r "(-72) * 60 = ?" ((fp-multo nseventytwo sixty x) (x))
+            (check-results-fp-equal? 'results n4320))
+            
+        (test/fp-relation-r "(-421) * 1 = ?" ((fp-multo neg421 one x) (x))
+            (check-results-fp-equal? 'results neg421))
+            
+        (test/fp-relation-r "2 * ? = (-2)" ((fp-multo two x ntwo) (x))
+            (check-results-fp-equal? 'results negone))
+        
+        (test/fp-relation-r "? * 2 = (-6)" ((fp-multo x two n6) (x))
+            (check-results-fp-equal? 'results nthree))
 
-(displayln "Tests for same sign fp numbers")
-(run-tests equal-signs-test)
-(displayln "Tests for different sign fp numbers")
-(run-tests nonequal-signs-test)
+        (test/fp-relation-r "4.5 * (-7) = ?" ((fp-multo p4.5 n7 x) (x))
+            (check-results-fp-equal? 'results n31.5))
+
+        #;(test/fp-relation-r "(-10.12) * 4.6 = ?" ((fp-multo n10.12 p4.6 x) (x)) ;unrepresentable
+            (check-results-fp-equal? 'results n46.552))
+        #;(test/fp-relation-r "4.5 * (-6.3) = ?" ((fp-multo p4.5 n6.3 x) (x)) ;unrepresentable
+            (check-results-fp-equal? 'results n28.35))))
+
+(define unknown-signs
+    (test-suite "Tests for fp numbers that have different signs"
+
+        (test/fp-relation-r "x * y = 1" ((fp-multo x y one) (x y))
+            (displayln 'results))
+
+        (test/fp-relation-r "x * y = 2" ((fp-multo x y two) (x y))
+            (displayln 'results))
+
+        (test/fp-relation-r "x * y = (-1)" ((fp-multo x y negone) (x y))
+            (displayln 'results))
+
+        (test/fp-relation-r "x * y = (-6)" ((fp-multo x y n6) (x y))
+            (displayln 'results))
+            
+        (test/fp-relation-r "x * 2 = y" ((fp-multo x two y) (x y))
+            (displayln 'results))))
+
+;(displayln "Tests for same sign fp numbers")
+;(run-tests equal-signs-test)
+;(displayln "Tests for different sign fp numbers")
+;(run-tests nonequal-signs-test)
+
+(run-tests unknown-signs)

@@ -2,11 +2,14 @@
 
 (require rackunit rackunit/text-ui "mk.rkt" "float.rkt" "mk-float.rkt" "test-numbers.rkt")
 (provide create-mk-length< create-mk-length> create-mk-length= check-mk-pred check-mk-length> check-mk-length< check-mk-length= check-fp-equal?
-         run/time test/fp-relation-r)
+         check-list-fp-equal? check-results-fp-equal? check-results-list-fp-equal? run/time test/fp-relation-r)
 
 (define FEW-RESULTS-MSG "There are not enough results!")
 (define GREAT-RESULTS-MSG "There are too many results!")
 (define NEQ-RESULTS-MSG "There are too many or too few results!")
+
+(define (both-empty? l1 l2)
+    (and (equal? (length l1) (length l2)) (equal? (length l1) 0)))
 
 (define (create-mk-length< n)
     (lambda (run-result) (< (length run-result) n)))
@@ -85,14 +88,16 @@
 (define (build-err-msg msgs)
     (foldl err-msg-folder (first msgs) (rest msgs)))
 
-#|
-(check-fp-equal? fp1 fp2)
-    fp1: A miniKanren floating point number
-    fp2: A miniKanren floating point number
 
-    A check that determines if fp1 == fp2. If they are not equal, the error msg says exactly what is not equal.
+#|
+(examine-fps fp1 fp2)
+    fp1: A mkfp number.
+    fp2: A mkfp number.
+
+    Compares each floating number component by component and returns
+    a string indicating whether they are equal or differ at a certain component. 
 |#
-(define-check (check-fp-equal? fp1 fp2)
+(define (examine-fps fp1 fp2)
     (let* ([sign1 (get-sign fp1)]
            [sign2 (get-sign fp2)]
            [sign-equal? (equal? sign1 sign2)]
@@ -110,10 +115,60 @@
 
            [msgs (filter (lambda (msg) (not (equal? "" msg))) (list sign-msg exp-msg man-msg))]
 
-           [equal (and sign-equal? man-equal? exp-equal?)])
-          (if equal 
-            (void)
-            (fail-check (build-err-msg msgs)))))
+           [equal (and sign-equal? man-equal? exp-equal?)]) 
+        (cond
+         [equal "eq"]
+         [else (build-err-msg msgs)])))
+
+#|
+(check-fp-equal? fp1 fp2)
+    fp1: A miniKanren floating point number
+    fp2: A miniKanren floating point number
+
+    A check that determines if fp1 == fp2. If they are not equal, the error msg says exactly what is not equal.
+|#
+(define-check (check-fp-equal? fp1 fp2)
+    (let* ([examination-result (examine-fps fp1 fp2)])
+          (cond
+            [(equal? examination-result "eq") (void)]
+            [else (fail-check examination-result)])))
+
+#|
+(check-list-fp-helper fp1s fp2s n)
+
+Driver function for (check-list-fp-equal? fp1s fp2s).
+|#
+(define-check (check-list-fp-helper fp1s fp2s n)
+    (cond 
+        [(both-empty? fp1s fp2s) (void)]
+        [else (let* ([fp1-first (first fp1s)]
+                     [fp2-first (first fp2s)]
+
+                     [examination-result (examine-fps fp1-first fp2-first)]
+                     [equal (equal? examination-result "eq")]
+                     [fail-msg (string-append "Fp at index: " (number->string n) "\n" examination-result)]) 
+        
+                (cond
+                    [equal (check-list-fp-helper (rest fp1s) (rest fp2s))] ; we know at least the forst two match
+                    [else (fail-check fail-msg)]))]))
+
+#|
+(check-list-fp-equal? fp1s fp2s)
+    fp1s: A list of mkfp numbers.
+    fp2s: A list of mkfp numbers
+
+A check to determine where the two parallel lists of mk
+|#
+(define-check (check-list-fp-equal? fp1s fp2s)
+    (check-list-fp-helper fp1s fp2s 0))
+
+(define-check (check-results-fp-equal? results fp)
+    (check-fp-equal? (first results) fp))
+
+(define-check (check-results-list-fp-equal? results fps)
+    (check-list-fp-equal? (first results) fps))
+
+
 
 #|
 (run/time <name> : <constraint-expr> (<lvar> <lvars> ...))     ; Finds 1 answer
@@ -136,52 +191,28 @@
             (displayln (string-append "\n" "Running: " <name>))
             (time (run* (<lvar> <lvars> ...) <constraint-expr>)))]))
 
-#|
-(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...)) ; Runs for 1 answer and ensures there is one answer.
-(test/fp-relation-r <test-name> <n> <expected-m> <expected> : <relation-expr> (<lvar> <lvars> ...)) ; Runs for n answers and ensures m answers are found.
-|#          
-(define-syntax test/fp-relation-r
-    (syntax-rules (:) 
-     [(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...))
-        (test-case <test-name>
-         (let* ([result (run/time <test-name> : 
+(define-syntax test/fp-relation-r 
+    (syntax-rules ()
+        [(test/fp-relation-r <test-name> (<relation-expr> (<lvar> <lvars> ...)) (<check> <check-args> ...) ...)
+         (test-case <test-name>
+         (let* ([results (run/time <test-name> : 
                                  <relation-expr> (<lvar> <lvars> ...))])
-              (check-mk-length= result 1)
-              (check-fp-equal? (first result) <expected>)))]
-     [(test/fp-relation-r <test-name> <n> <expected-n> <expected> : <relation-expr> (<lvar> <lvars> ...))
+              (check-mk-length= results 1)
+              (<check> (if (equal? <check-args> 'results) results <check-args>) ... ) ...
+              ))]
+        [(test/fp-relation-r <test-name> <n> <expected-n> (<relation-expr> (<lvar> <lvars> ...)) (<check> <check-args> ...) ...)
         (test-case <test-name>
-         (let* ([result (run/time <test-name> : 
+         (let* ([results (run/time <test-name> : 
                                  <relation-expr> <n> (<lvar> <lvars> ...))])
-              (check-mk-length= result <expected-n>)
-              (check-fp-equal? (first result) <expected>)))]))
+              (check-mk-length= results <expected-n>)
+              (<check> (if (equal? <check-args> 'results) results <check-args>) ... ) ...))]))
 
 (define test 
     (test-suite "macro check"
 
-        (test/fp-relation-r "1 + 1 = ?" two : (fp-pluso one one x) (x))
-        (test/fp-relation-r "2 + 1 = ?" three : (fp-pluso one two x) (x))
-        (test/fp-relation-r "42 + 4 = ?" p46 : (fp-pluso fortytwo four x) (x))
-        (test/fp-relation-r "72 + 60 = ?" p132 : (fp-pluso seventytwo sixty x) (x))
-        (test/fp-relation-r "-4 + -1 = ?" n5 : (fp-pluso negfour negone x) (x))
-        (test/fp-relation-r "-4 + -70 = ?" n74 : (fp-pluso negfour negseventy x) (x))
-        (test/fp-relation-r "-421 + -1 = ?" n422 : (fp-pluso neg421 negone x) (x))
-        ;(test/fp-relation-r "2.5 + 3 = ?" p5.5 : (fp-pluso p2.5 three x) (x))
-        ;(test/fp-relation-r "2.5 + 3.25 = ?" p5.75 : (fp-pluso p2.5 p3.25 x) (x))
-        ;(test/fp-relation-r "1.05 + 3.2325 = ?" p4.2825 : (fp-pluso p1.05 p3.2325 x) (x))
-        ;(test/fp-relation-r "-4 + -9 = ?" n13 :(fp-pluso negfour n9 x) (x))
+        (test/fp-relation-r "x*1 = 2" ((fp-multo x one two) (x))
+            (check-results-fp-equal? 'results two))
+        (test/fp-relation-r "x*y = 1" ((fp-multo x y one) (x y))
+            (check-results-list-fp-equal? 'results (list one one)))))
 
-        (test/fp-relation-r "2 + ? = 3" one : (fp-pluso two x three) (x))
-        (test/fp-relation-r "? + 2 = 3" one : (fp-pluso x two three) (x))
-        (test/fp-relation-r "42 + ? = 46" four : (fp-pluso fortytwo x p46) (x))
-        (test/fp-relation-r "? + 42 = 46" four : (fp-pluso x fortytwo p46) (x))
-        (test/fp-relation-r "72 + ? = 132" sixty : (fp-pluso seventytwo x p132) (x))
-        (test/fp-relation-r "? + 72 = 132" sixty : (fp-pluso x seventytwo p132) (x))
-        (test/fp-relation-r "-4 + ? = -5" negone : (fp-pluso negfour x n5) (x))
-        (test/fp-relation-r "? + -4 = -5" negone : (fp-pluso x negfour n5) (x))
-        #;(test/fp-relation-r "-421 + ? = -422" negone : (fp-pluso neg421 x n422) (x)) ; these take ridculously long +15 minutes
-        #;(test/fp-relation-r "? + -421 = -422" negone : (fp-pluso x neg421 n422) (x))
-        ;(test/fp-relation-r "-10.12 + ? = -33.365" n23.245 : (fp-pluso n10.12 x n33.365) (x))
-        ;(test/fp-relation-r "? + -10.12 = -33.365" n23.245 : (fp-pluso x n10.12 n33.365) (x))
-    ))
-
-;(run-tests test 'verbose)
+;(run-tests test 'verbose) 
