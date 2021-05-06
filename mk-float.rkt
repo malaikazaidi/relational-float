@@ -2,241 +2,222 @@
 
 (require "mk.rkt")
 (require "numbers.rkt")
-(require "test-numbers.rkt")
-(provide fp-pluso fp-multo frac-lengtho exponento fp-< fp-<= fp-=)
+;(require "test-numbers.rkt") ;Un-comment requiore to play with test-numbers in REPL.
+(provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
 
 (define float-format '(sign
                        expo ; Oleg number
-                       frac ; kind of Oleg number?
-                       ))
-
-(define (get-signo f sign)
-  (fresh (expo frac)
-         (== f (list sign expo frac))))
-
-(define (get-expo f expo)
-  (fresh (sign frac)
-         (== f (list sign expo frac))))
-
-(define (get-fraco f frac)
-  (fresh (sign expo)
-         (== f (list sign expo frac))))
+                       frac)) ; kind of Oleg number?))
 
 #|
-(not-specialvalo fp)
-Checks if fp does not represent an infinity/NaN (i.e a special value). (used)
-|#
-(define (not-specialvalo fp)
-    (fresh (sign expo frac)
-        (fp-decompo fp sign expo frac)
-        (=/= expo '(1 1 1 1  1 1 1 1))
-    ) 
-) 
+(noto a not-a)
+    a: 0 or 1
+    not-a: The result of ~a.
 
-#|
-Drops least significant bit in the mantissa, where cap is 24 bits. (used)
-|#
-
-(define (drop-leastsig-bito frac fracr)
-  (fresh (bit)
-         (frac-lengtho fracr)
-         (appendo bit fracr frac)))
-
-#|
-Shifts the fraction n times. Removes least sig bits
-|# 
-
-(define (shifto frac n result curr-digit)
-  (conde ((== n '())
-          (== frac result))
-         ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-digit)
-            (== n (cons n-first n-rest))
-            (conde ((== n-first 0)
-                    (== frac tmp))
-                   ((== n-first 1)
-                    (conde
-                        ((== curr-digit 1) ; remove 1 digit
-                         (== frac (cons b1 tmp)))
-                        ((== curr-digit 2) ; remove 2 digit
-                         (== frac `(,b1 ,b2 . ,tmp)))
-                        ((== curr-digit 3) ; remove 4 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 . ,tmp)))
-                        ((== curr-digit 4) ; remove 8 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 ,b8 . ,tmp))))))
-            (conde ((== curr-digit 1) (== next-digit 2))
-                   ((== curr-digit 2) (== next-digit 3))
-                   ((== curr-digit 3) (== next-digit 4))
-                   ((== curr-digit 4) (== next-digit 5)))
-            (shifto tmp n-rest result next-digit)))))
-
-#|
-Shifts exponent
-|# 
-(define (shift-expo man man-sum exp exp-sum)
-  (conde ((== man '())
-          (== man-sum '())
-          (== exp exp-sum))
-         ((== man '())
-          (=/= man-sum '())
-          (pluso '(1) exp exp-sum))
-         ((fresh (manfst manrst man-sumfst man-sumrst)
-                 (== man (cons manfst manrst))
-                 (== man-sum (cons man-sumfst man-sumrst))
-                 (shift-expo manrst man-sumrst exp exp-sum)))))
-  
-  
-#|
-Negates sign
+    Negates the bit a, i.e negation relation.
 |#  
-(define (negsigno sign nsign)
-  (conde ((== sign 1)
-          (== nsign 0))
-         ((== sign 0)
-          (== nsign 1))))
-
-(define (frac-lengtho m)
-  (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16)
-         (== m (list d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16))
-         ))
+(define (noto a not-a)
+    (conde ((== a 1)
+            (== not-a 0))
+           ((== a 0)
+            (== not-a 1))))
 
 #|
-Adds 2 exponents and subtracts bias (127)
+(xoro b1 b2 br)
+    b1: 0 or 1
+    b2: 0 or 1
+    br: the result of (b1 xor b2)
+
+    An exclusive-or relation.
 |#
-(define (shifted-pluso expo1 expo2 rexpo)
-  (fresh (exposum) 
-         (pluso expo1 expo2 exposum)
-         (pluso BIAS rexpo exposum)
-         )
-  )
+(define (xoro b1 b2 br)
+    (conde 
+        ((== b1 1) (== b2 1) (== br 0))
+        ((== b1 0) (== b2 0) (== br 0))
+        ((== b1 1) (== b2 0) (== br 1))
+        ((== b1 0) (== b2 1) (== br 1))))
 
 #|
-Ensures that the exponent length is no more than 8.
+(get-signo f sign)
+    f: A MKFP number.
+    sign: The sign of f.
+
+    Sign is 0 when f is positive, 1 otherwise.
 |#
-(define (exponento expo) 
-   (fresh (a b b0 b1 b2 b3 b4 b5 b6 b7)
-        (== b (list b0 b1 b2 b3 b4 b5 b6 b7))
-        (appendo expo a b)))
+(define (get-signo f sign)
+    (fresh (expo frac)
+        (== f (list sign expo frac))))
 
-; add constraint for -zero and +zero to be equal to one another.
-(define (fp-<= f1 f2)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-         (== f1 (list sign1 expo1 frac1))
-         (== f2 (list sign2 expo2 frac2))
-         (conde ((== sign1 sign2)
-                 (== expo1 expo2)
-                 (<=o frac1 frac2))
-                ((== sign1 sign2)
-                 (<=o expo1 expo2))
-                ((=/= sign1 sign2)
-                 (== sign1 1)
-                 (== sign2 0)))
-         ))
+#|
+(get-expo f sign)
+    f: A MKFP number.
+    expo: The exponent of f.
 
+    expo is an Oleg number containing no more than 8 bits.
+|#
+(define (get-expo f expo)
+    (fresh (sign frac)
+        (== f (list sign expo frac))))
 
-(define (fp-< f1 f2)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-         (== f1 (list sign1 expo1 frac1))
-         (== f2 (list sign2 expo2 frac2))
-         (conde ((== sign1 sign2)
-                 (== expo1 expo2)
-                 (<o frac1 frac2))
-                ((== sign1 sign2)
-                 (<o expo1 expo2))
-                ((=/= sign1 sign2)
-                 (== sign1 1)
-                 (== sign2 0))
-                )
-         ))
+#|
+(get-fraco f frac)
+    f: A MKFP number.
+    frac The fraction of f.
 
-(define (fp-= f1 f2)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-         (== f1 (list sign1 expo1 frac1))
-         (== f2 (list sign2 expo2 frac2))
-         (conde ((== sign1 sign2)
-                 (== expo1 expo2)
-                 (== frac1 frac2)))
-         ))
+    fraction is an Oleg number containing exactly 16 bits.
+|#
+(define (get-fraco f frac)
+    (fresh (sign expo)
+        (== f (list sign expo frac))))
 
 #|
 Decomposes fp number into sign, exponent, and mantissa
 |#
 (define (fp-decompo fp sign expo frac)
- (fresh ()
-         (== fp (list sign expo frac))
-          (frac-lengtho frac))
-  )
-#|
-Floating-Point Addition for same signs
-|#
-
-(define (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
-  ;keep frac-result as final return value
-  (fresh (shifted-frac1 frac-sum frac-result)
-         (== sign1 sign2)
-         (== rsign sign1)
-         ;shift the frac of the SMALLER exponent
-         (shifto frac1 expo-diff shifted-frac1 1)
-         ; exponent shift
-         (shift-expo frac2 frac-sum expo2 rexpo)
-                  
-         ;drop least-sig bit
-         (drop-leastsig-bito frac-sum rfrac)
-                   
-         ; oleg number addition
-         (pluso shifted-frac1 frac2 frac-sum)
-         )
-  )
+    (fresh ()
+        (== fp (list sign expo frac))
+        (frac-lengtho frac)))
 
 #|
-swaps the order of parameters
+(not-specialvalo fp)
+    fp: A MKFP number.
+
+Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
-(define (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
-  (fresh (expo-diff)  
-         (conde
-          ((pluso expo-diff expo1 expo2)
-           (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac))
-          ((=/= expo1 expo2)
-           (pluso expo-diff expo2 expo1)
-           (fp-samesignaddero sign2 expo2 frac2 sign1 expo1 frac1 expo-diff rsign rexpo rfrac))
-          ))
-  )
+(define (not-specialvalo fp)
+    (fresh (sign expo frac)
+        (fp-decompo fp sign expo frac)
+        (=/= expo '(1 1 1 1  1 1 1 1)))) 
 
 #|
-Floating-Point Addition
+(frac-shifto frac n result)
+    frac: The fraction of a MKFP number. 
+    n: the number of least-significant bits from frac to remove.
+    result: The result of removing n of the least significant bits from frac.
+
+    Removes n of the least significant bits from frac and equates that to result.
 |#
-(define (fp-pluso f1 f2 r)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
-         (fp-decompo f1 sign1 expo1 frac1)
-         (fp-decompo f2 sign2 expo2 frac2)
-         (fp-decompo r rsign rexpo rfrac)
-         (conde 
-          ((== sign1 sign2)
-           (== sign2 rsign)
-           (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
-          
-          ;when signs are opposite
-          ;When C has the same sign as A (+)
-          ;A+(-B) = C -> A = C + B
-          ; fp-pluso (-B, C, A)
-          ;When C has the same sign as B (-)
-          ;A + (-B) = -C -> -B = -C + (-A)
-          ;fp-pluso (C, -A, B)
-          ((=/= sign1 sign2)
-           (fresh (newsign)
-                  (conde ((== sign1 rsign)
-                          (negsigno sign2 newsign)
-                          (fp-swapo newsign expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
-                         ((== sign2 rsign)
-                          (negsigno sign1 newsign)
-                          (fp-swapo newsign expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))))
-          )))
+(define (frac-shifto frac n result)
+    (fresh () (shifto-helper frac n result 1)))
 
 #|
-Normalizes the exponent in multiplication .
+(shifto-helper frac n result curr-bit)
+    frac: The fraction of a MKFP number. 
+    n: the number of least-significant bits from frac to remove.
+    result: The result of removing n of the least significant bits from frac.
+    curr-bit: The current bit of n that we are iterating on.
+
+    Removes n of the least significant bits from frac and equates that to result.
 |#
-(define (mult-expo-normalize pre-expo pre-fracr rexpo)
+(define (shifto-helper frac n result curr-bit)
+  (conde ((== n '())
+          (== frac result))
+
+         ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-bit)
+            (== n (cons n-first n-rest))
+
+            (conde ((== n-first 0)
+                    (== frac tmp))
+                   ((== n-first 1)
+                    (conde
+                        ((== curr-bit 1) ; remove 1 digit
+                         (== frac (cons b1 tmp)))
+
+                        ((== curr-bit 2) ; remove 2 digit
+                         (== frac `(,b1 ,b2 . ,tmp)))
+                        
+                        ((== curr-bit 3) ; remove 4 digits
+                         (== frac `(,b1 ,b2 ,b3 ,b4 . ,tmp)))
+                        
+                        ((== curr-bit 4) ; remove 8 digits
+                         (== frac `(,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 ,b8 . ,tmp))))))
+
+            (conde ((== curr-bit 1) (== next-bit 2))
+                   ((== curr-bit 2) (== next-bit 3))
+                   ((== curr-bit 3) (== next-bit 4))
+                   ((== curr-bit 4) (== next-bit 5)))
+            
+            (shifto-helper tmp n-rest result next-bit)))))
+
+#|
+(expo-lengtho expo)
+    expo: A Oleg number.
+
+    Ensures that expo contains no more than 8 bits.
+|#
+(define (expo-lengtho expo) 
+    (fresh (r b b0 b1 b2 b3 b4 b5 b6 b7)
+        (== b (list b0 b1 b2 b3 b4 b5 b6 b7)); b is a list of 8 bits.
+        (appendo expo r b))) ; ensure that expo (++) r = b
+
+#|
+(frac-lengtho frac)
+    frac: A Oleg number.
+
+    Ensures that fraction contains exactly 16 bits.
+|#
+(define (frac-lengtho frac)
+    (fresh (b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16)
+        (== frac (list b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16))))
+
+#|
+(drop-leastsig-bito frac fracr)
+    frac: The fraction being created that may have more than 24 bits.
+    fracr: The MKFP fraction that takes the 24 most significant bits from frac.
+
+Drops least significant bit in the fraction, where cap is 24 bits.
+|#
+(define (drop-leastsig-bito frac fracr)
+    (fresh (bit)
+        (frac-lengtho fracr)
+        (appendo bit fracr frac)))
+
+#|
+(bias-shifted-pluso expo1 expo2 rexpo)
+    expo1: The exponent of a MKFP number being multiplied.
+    expo2: The exponent of a MKFP number being multiplied.
+    rexpo: The result of [(expo1 + expo2) - 127]
+|#
+(define (bias-shifted-pluso expo1 expo2 rexpo)
+    (fresh (exposum) 
+        (pluso expo1 expo2 exposum)
+        (pluso BIAS rexpo exposum)))
+
+#|
+(fp-pluso-normalize-expo frac frac-sum expo norm-expo)
+    frac: The fraction of the MKFP number with the larger exponent.
+    expo: The corresponding exponent of the MKFP number containing frac. 
+    frac-sum: The result of the Oleg addition of the two fractions being added.
+    norm-expo: The result of normalizing the exponent.
+
+    Normalize the exponent (expo) based on the values of frac and frac-sum. 
+    (adds one to expo when the addition rolls to a new bit position.)
+|# 
+(define (fp-pluso-normalize-expo frac expo frac-sum norm-expo)
+    (conde ((== frac '())
+            (== frac-sum '())
+            (== expo norm-expo))
+           
+           ((== frac '())
+            (=/= frac-sum '())
+            (pluso '(1) expo norm-expo))
+
+           ((fresh (fracfst fracrst frac-sumfst frac-sumrst)
+                (== frac (cons fracfst fracrst))
+                (== frac-sum (cons frac-sumfst frac-sumrst))
+                (fp-pluso-normalize-expo fracrst expo frac-sumrst norm-expo)))))
+
+#|
+(fp-multo-normalize-expo expo frac-prod norm-expo)
+    expo: The exponent of the product before normalization
+    frac-prod: The fractoin of the product before dropping the least significant bits.
+    norm-expo: The normalized exponent based off of expo and frac-prod. 
+
+    Normalizes the exponent in floating point multiplication.
+|#
+(define (fp-multo-normalize-expo expo frac-prod norm-expo)
     (fresh (a b b-first b-rest rem temp)
         ; a and b have the same length as pre-fracr
         (frac-lengtho a)
@@ -248,55 +229,190 @@ Normalizes the exponent in multiplication .
         ; Decompose pre-frac r into (a) ++ (b-rest) ++ (rem) 
         ; (a) ++ (b-rest) length = 16 + 15 = 31 bits
         (appendo a b-rest temp)
-        (appendo temp rem pre-fracr)
+        (appendo temp rem frac-prod)
 
         ; rem == '()  --> length pre-fracr = 31
         ; rem =/= '() --> length pre-fracr >= 32
         (conde 
             ((== rem '())
-             (== pre-expo rexpo))
+             (== expo norm-expo))
             ((=/= rem '())
-             (pluso '(1) pre-expo rexpo))
-        )
-    )
-)
-
+             (pluso '(1) expo norm-expo)))))
 
 #|
- XOR relation
+(fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
+    sign1: The sign of the MKFP number with the smaller exponent
+    expo1: The exponent of the MKFP number with the smaller exponent
+    frac1: The fraction of the MKFP number with the smaller exponent
+    sign2: The sign of the MKFP number with the larger exponent
+    expo2: The exponent of the MKFP number with the larger exponent
+    frac2: The fraction of the MKFP number with the larger exponent
+    expo-diff: An Oleg number that equals (expo2 - expo1)
+    rsign: The resulting sign of the addition f1 + f2
+    rexpo: The resulting exponent of the addition f1 + f2
+    rfrac: The resulting fraction of the addition f1 + f2
+
+    Floating-Point Addition for same signs
 |#
-(define (xoro b1 b2 br)
-  (conde 
-   ((== b1 1) (== b2 1) (== br 0))
-   ((== b1 0) (== b2 0) (== br 0))
-   ((== b1 1) (== b2 0) (== br 1))
-   ((== b1 0) (== b2 1) (== br 1))
-   )
-  )
+(define (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
+    (fresh (shifted-frac1 frac-sum)
+        (== sign1 sign2)
+        (== rsign sign1); Ensure the signs are all the same before continuing
+
+        ;shift the frac of the SMALLER exponent
+        (frac-shifto frac1 expo-diff shifted-frac1)
+        ; exponent shift to normalize
+        (fp-pluso-normalize-expo frac2 expo2 frac-sum rexpo)
+                 
+        ;drop least-sig bit
+        (drop-leastsig-bito frac-sum rfrac)
+                  
+        ; oleg number addition
+        (pluso shifted-frac1 frac2 frac-sum)))
 
 #|
-Floating-Point Multiplication
+(fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+    sign1: The sign of the MKFP number with the smaller exponent
+    expo1: The exponent of the MKFP number with the smaller exponent
+    frac1: The fraction of the MKFP number with the smaller exponent
+    sign2: The sign of the MKFP number with the larger exponent
+    expo2: The exponent of the MKFP number with the larger exponent
+    frac2: The fraction of the MKFP number with the larger exponent
+    rsign: The resulting sign of the addition f1 + f2
+    rexpo: The resulting exponent of the addition f1 + f2
+    rfrac: The resulting fraction of the addition f1 + f2
+
+    Calls fp-samesignaddero so that the number out of f1 and f2 with the
+    smaller exponent is entered first.
+|#
+(define (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+    (fresh (expo-diff)  
+        (conde
+            ((pluso expo-diff expo1 expo2)
+             (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac))
+            ((=/= expo1 expo2)
+             (pluso expo-diff expo2 expo1)
+             (fp-samesignaddero sign2 expo2 frac2 sign1 expo1 frac1 expo-diff rsign rexpo rfrac)))))
+
+#|
+(fp-pluso f1 f2 r)
+    f1: A MKFP number.
+    f2: A MKFP number.
+    r: A MKFP number that satisfies f1 + f2 = r (under the rules of floating point addition)
+
+    General Floating-Point Addition
+|#
+(define (fp-pluso f1 f2 r)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+        (fp-decompo f1 sign1 expo1 frac1)
+        (fp-decompo f2 sign2 expo2 frac2)
+        (fp-decompo r rsign rexpo rfrac)
+        (conde 
+            ((== sign1 sign2)
+             (== sign2 rsign)
+             (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
+          
+
+            ;Approach when signs are opposite
+            ;When r has the same sign as f1 (+)
+            ;f1+(-f2) = r -> f1 = r + f2
+            ;fp-pluso (-f2, r, f1)
+            ;When r has the same sign as f2 (-)
+            ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
+            ;fp-pluso (r, -f1, f2)
+            ((=/= sign1 sign2)
+             (fresh (newsign)
+                (conde ((== sign1 rsign)
+                        (noto sign2 newsign)
+                        (fp-swapo newsign expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
+
+                       ((== sign2 rsign)
+                        (noto sign1 newsign)
+                        (fp-swapo newsign expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2))))))))
+
+
+#|
+(fp-multo f1 f2 r)
+    f1: A MKFP number.
+    f2: A MKFP number.
+    r: A MKFP number that satisfies f1 * f2 = r (under the rules of floating point multiplication)
+
+    General Floating Point Addition
 |#
 (define (fp-multo f1 f2 r)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo pre-fracr)
-         (== f1 (list sign1 expo1 frac1))
-         (frac-lengtho frac1)
-         (== f2 (list sign2 expo2 frac2))
-         (frac-lengtho frac2)
-         (== r (list rsign rexpo rfrac))
-         (frac-lengtho rfrac)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo pre-fracr)
+        (fp-decompo f1 sign1 expo1 frac1)
+        (fp-decompo f2 sign2 expo2 frac2)
+        (fp-decompo r rsign rexpo rfrac)
 
-         (not-specialvalo f1)
-         (not-specialvalo f2)
+        (not-specialvalo f1)
+        (not-specialvalo f2)
          
-         (xoro sign1 sign2 rsign)
-         (drop-leastsig-bito pre-fracr rfrac)
+        (xoro sign1 sign2 rsign)
+        (drop-leastsig-bito pre-fracr rfrac)
          
-         (mult-expo-normalize pre-rexpo pre-fracr rexpo)
+        (fp-multo-normalize-expo pre-rexpo pre-fracr rexpo)
          
-         (*o frac1 frac2 pre-fracr)
-         (shifted-pluso expo1 expo2 pre-rexpo)
+        (*o frac1 frac2 pre-fracr)
+        (bias-shifted-pluso expo1 expo2 pre-rexpo)
 
-         (exponento expo1)
-         (exponento expo2)
-         (exponento rexpo)))
+        (expo-lengtho expo1)
+        (expo-lengtho expo2)
+        (expo-lengtho rexpo)))
+
+; TODO: add constraint for -zero and +zero to be equal to one another.
+#|
+(fp-<= f1 f2)
+    f1: A MKFP number.
+    f2: A MKFP number.
+
+    Relation that ensures f1 <= f2.
+|#
+(define (fp-<= f1 f2)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+        (fp-decompo f1 sign1 expo1 frac1)
+        (fp-decompo f2 sign2 expo2 frac2)
+        (conde ((== sign1 sign2)
+                (== expo1 expo2)
+                (<=o frac1 frac2))
+               ((== sign1 sign2)
+                (<=o expo1 expo2))
+               ((=/= sign1 sign2)
+                (== sign1 1)
+                (== sign2 0)))))
+
+
+#|
+(fp-< f1 f2)
+    f1: A MKFP number.
+    f2: A MKFP number.
+
+    Relation that ensures f1 < f2.
+|#
+(define (fp-< f1 f2)
+  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+        (fp-decompo f1 sign1 expo1 frac1)
+        (fp-decompo f2 sign2 expo2 frac2)
+        (conde ((== sign1 sign2)
+                (== expo1 expo2)
+                (<o frac1 frac2))
+               ((== sign1 sign2)
+                (<o expo1 expo2))
+               ((=/= sign1 sign2)
+                (== sign1 1)
+                (== sign2 0)))))
+
+#|
+(fp-= f1 f2)
+    f1: A MKFP number.
+    f2: A MKFP number.
+
+    Relation that ensures f1 == f2.
+|#
+(define (fp-= f1 f2)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
+        (fp-decompo f1 sign1 expo1 frac1)
+        (fp-decompo f2 sign2 expo2 frac2)
+        (conde ((== sign1 sign2)
+                (== expo1 expo2)
+                (== frac1 frac2)))))
