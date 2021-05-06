@@ -3,8 +3,6 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt")
-(require "build-float.rkt")
-(require rackunit rackunit/text-ui)
 (provide fp-pluso fp-multo frac-lengtho exponento fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
@@ -28,7 +26,7 @@
 
 #|
 (not-specialvalo fp)
-Checks if fp does not represent an infinity/NaN (i.e a special value).
+Checks if fp does not represent an infinity/NaN (i.e a special value). (used)
 |#
 (define (not-specialvalo fp)
     (fresh (sign expo frac)
@@ -38,16 +36,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 ) 
 
 #|
-Drops most significant bit in the mantissa.
-|#
-(define (drop-mostsig-bito frac fracr)
-  (conde ((fresh (frachead)
-                 (conde ((appendo frachead '(0) frac))
-                        ((appendo frachead '(1) frac)))
-                 (== fracr frachead)))))
-
-#|
-Drops least significant bit in the mantissa, where cap is 24 bits.
+Drops least significant bit in the mantissa, where cap is 24 bits. (used)
 |#
 
 (define (drop-leastsig-bito frac fracr)
@@ -56,34 +45,10 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
          (appendo bit fracr frac)))
 
 #|
-Determines if list is of same length
-|# 
-(define (same-lengtho lst1 lst2)
-  (conde ((== lst1 '())
-          (== lst2 '()))
-         ((fresh (f1 r1 f2 r2)
-                 (== lst1 (cons f1 r1))
-                 (== lst2 (cons f2 r2))
-                 (same-lengtho r1 r2)))))
-
-#|
-Shifts the exponent. 
-|# 
-(define (shifto frac n result)
-  (conde ((zeroo n)
-          (== frac result))
-         ((poso n)
-          (fresh (shifted-frac n-minus-1)
-                 (== shifted-frac (cons 0 frac))
-                 (pluso n-minus-1 '(1) n)
-                 (shifto shifted-frac n-minus-1 result)
-                 ))))
-
-#|
-Shifts the exponent. Removes least sig bits
+Shifts the fraction n times. Removes least sig bits
 |# 
 
-(define (correct-shifto frac n result curr-digit)
+(define (shifto frac n result curr-digit)
   (conde ((== n '())
           (== frac result))
          ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-digit)
@@ -104,7 +69,7 @@ Shifts the exponent. Removes least sig bits
                    ((== curr-digit 2) (== next-digit 3))
                    ((== curr-digit 3) (== next-digit 4))
                    ((== curr-digit 4) (== next-digit 5)))
-            (correct-shifto tmp n-rest result next-digit)))))
+            (shifto tmp n-rest result next-digit)))))
 
 #|
 Shifts exponent
@@ -130,15 +95,6 @@ Negates sign
           (== nsign 0))
          ((== sign 0)
           (== nsign 1))))
-
-#|
-Adding leading bit to mantissa.
-|#
-(define (addleadbito exp man r)
-  (conde ((zeroo exp)
-          (== r man))
-         ((poso exp)
-          (appendo man '(1) r))))
 
 (define (frac-lengtho m)
   (fresh (d01 d02 d03 d04 d05 d06 d07 d08 d09 d10 d11 d12 d13 d14 d15 d16)
@@ -221,7 +177,7 @@ Floating-Point Addition for same signs
          (== sign1 sign2)
          (== rsign sign1)
          ;shift the frac of the SMALLER exponent
-         (correct-shifto frac1 expo-diff shifted-frac1 1)
+         (shifto frac1 expo-diff shifted-frac1 1)
          ; exponent shift
          (shift-expo frac2 frac-sum expo2 rexpo)
                   
@@ -278,25 +234,8 @@ Floating-Point Addition
           )))
 
 #|
-Performs and operation on bit1 and bit2. Outputs an Oleg number.
+Normalizes the exponent in multiplication .
 |#
-(define (ando bit1 bit2 bitr)
-  (conde ((== bit1 bit2)
-          (== bit1 1)
-          (== bitr '(1)))
-         
-         ((== bit1 bit2)
-          (== bit1 0)
-          (== bitr '()))
-         
-         ((=/= bit1 bit2)
-          (== bitr '()))))
-
-
-#|
-Normalizes the exponent.
-|#
-
 (define (mult-expo-normalize pre-expo pre-fracr rexpo)
     (fresh (a b b-first b-rest rem temp)
         ; a and b have the same length as pre-fracr
