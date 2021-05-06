@@ -40,39 +40,6 @@
         ((== b1 0) (== b2 1) (== br 1))))
 
 #|
-(get-signo f sign)
-    f: A MKFP number.
-    sign: The sign of f.
-
-    Sign is 0 when f is positive, 1 otherwise.
-|#
-(define (get-signo f sign)
-    (fresh (expo frac)
-        (== f (list sign expo frac))))
-
-#|
-(get-expo f sign)
-    f: A MKFP number.
-    expo: The exponent of f.
-
-    expo is an Oleg number containing no more than 8 bits.
-|#
-(define (get-expo f expo)
-    (fresh (sign frac)
-        (== f (list sign expo frac))))
-
-#|
-(get-fraco f frac)
-    f: A MKFP number.
-    frac The fraction of f.
-
-    fraction is an Oleg number containing exactly 16 bits.
-|#
-(define (get-fraco f frac)
-    (fresh (sign expo)
-        (== f (list sign expo frac))))
-
-#|
 Decomposes fp number into sign, exponent, and mantissa
 |#
 (define (fp-decompo fp sign expo frac)
