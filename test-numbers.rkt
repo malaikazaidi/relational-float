@@ -4,7 +4,7 @@
                 
 
 ;defined some fp-numbers for testing
-(define zero `(0 ,(build-num 0) ()))
+(define zero `(0 ,(build-num 0) ,(make-list 16 0)))
 (define one `(0 ,(build-num 127) ,(append (make-list 15 0) '(1))))
 (define two `(0 (0 0 0 0 0 0 0 1) ,(append (make-list 15 0) '(1))))
 (define ntwo `(1 (0 0 0 0 0 0 0 1) ,(append (make-list 15 0) '(1))))

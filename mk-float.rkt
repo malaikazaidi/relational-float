@@ -2,7 +2,7 @@
 
 (require "mk.rkt")
 (require "numbers.rkt")
-;(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
+(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
 (provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
@@ -40,6 +40,21 @@
         ((== b1 0) (== b2 1) (== br 1))))
 
 #|
+(dropr-zeroo lst stripped-lst)
+    lst: A binary list.
+    stripped-lst: The resulting list by stripping the right most zeros from lst.
+
+    Remove the zeros on the right side of lst.
+|#
+(define (dropr-zeroo lst stripped-lst)
+    (conde ((== lst '()) (== stripped-lst '()))
+        ((fresh (last-bit lst-head) 
+         (appendo lst-head (list last-bit) lst)
+         (conde ((== last-bit 1) (== stripped-lst lst))
+                ((== last-bit 0) (dropr-zeroo lst-head stripped-lst)))))))
+
+
+#|
 Decomposes fp number into sign, exponent, and mantissa
 |#
 (define (fp-decompo fp sign expo frac)
@@ -57,6 +72,26 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     (fresh (sign expo frac)
         (fp-decompo fp sign expo frac)
         (=/= expo '(1 1 1 1  1 1 1 1)))) 
+
+
+
+#|
+(prepare-fraco expo frac prepared-frac)
+    expo: The exponent of a MKFP number
+    frac: The corresponding fraction of a MKFP number
+    prepared-frac: A fraction that is prepared for pluso.
+
+    Determines if the number with exponent (expo) and fraction (frac) is denormal and prepares the 
+    fraction for addition.
+|#
+(define (prepare-fraco expo frac prepared-frac)
+    (fresh (frac-head last-bit)
+        (conde 
+            ((poso expo) (== frac prepared-frac)) 
+            ((zeroo expo)
+             (appendo frac-head (list last-bit) frac)
+             (== last-bit 0)
+             (dropr-zeroo frac prepared-frac)))))
 
 #|
 (frac-shifto frac n result)
@@ -270,14 +305,22 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     General Floating-Point Addition
 |#
 (define (fp-pluso f1 f2 r)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+    (fresh (sign1 expo1 frac1 prepared-frac1
+            sign2 expo2 frac2 prepared-frac2
+            rsign rexpo rfrac prepared-rfrac)
+
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
+
+        (prepare-fraco expo1 frac1 prepared-frac1)
+        (prepare-fraco expo2 frac2 prepared-frac2)
+        (prepare-fraco rexpo rfrac prepared-rfrac)
+
         (conde 
             ((== sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
+             (fp-swapo sign1 expo1 prepared-frac1 sign2 expo2 prepared-frac2 rsign rexpo prepared-rfrac))
           
 
             ;Approach when signs are opposite
@@ -291,11 +334,11 @@ Drops least significant bit in the fraction, where cap is 24 bits.
              (fresh (newsign)
                 (conde ((== sign1 rsign)
                         (noto sign2 newsign)
-                        (fp-swapo newsign expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
+                        (fp-swapo newsign expo2 prepared-frac2 rsign rexpo prepared-rfrac sign1 expo1 prepared-frac1))
 
                        ((== sign2 rsign)
                         (noto sign1 newsign)
-                        (fp-swapo newsign expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2))))))))
+                        (fp-swapo newsign expo1 prepared-frac1 rsign rexpo prepared-rfrac sign2 expo2 prepared-frac2))))))))
 
 
 #|

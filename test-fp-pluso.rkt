@@ -4,7 +4,7 @@
 (define equal-signs-test
     (test-suite "Tests for fp numbers that have equal signs."
 
-        (test/fp-relation-r "1 * 1 = ?" ((fp-pluso one one x) (x))
+        (test/fp-relation-r "1 + 1 = ?" ((fp-pluso one one x) (x))
             (check-results-fp-equal? 'results two))
 
         (test/fp-relation-r "2 + 1 = ?" ((fp-pluso one two x) (x))
