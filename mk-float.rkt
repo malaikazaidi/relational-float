@@ -231,7 +231,6 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         ; exponent shift to normalize
         (fp-pluso-normalize-expo frac2 expo2 frac-sum rexpo)
                  
-        ;drop least-sig bit
         (drop-leastsig-bito frac-sum rfrac)
                   
         ; oleg number addition
