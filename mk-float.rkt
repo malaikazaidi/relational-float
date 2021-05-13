@@ -343,9 +343,8 @@ Drops least significant bit in the fraction, where cap is 24 bits.
                 (== expo1 expo2)
                 (<=o frac1 frac2))
                ((== sign1 sign2)
-                (<=o expo1 expo2))
-               ((=/= sign1 sign2)
-                (== sign1 1)
+                (<o expo1 expo2))
+               ((== sign1 1)
                 (== sign2 0)))))
 
 
@@ -365,8 +364,7 @@ Drops least significant bit in the fraction, where cap is 24 bits.
                 (<o frac1 frac2))
                ((== sign1 sign2)
                 (<o expo1 expo2))
-               ((=/= sign1 sign2)
-                (== sign1 1)
+               ((== sign1 1)
                 (== sign2 0)))))
 
 #|
