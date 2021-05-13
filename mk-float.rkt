@@ -25,19 +25,19 @@
             (== not-a 1))))
 
 #|
-(xoro b1 b2 br)
+(xoro b0 b1 br)
+    b0 : 0 or 1
     b1: 0 or 1
-    b2: 0 or 1
-    br: the result of (b1 xor b2)
+    br: the result of (b0 xor b1)
 
     An exclusive-or relation.
 |#
-(define (xoro b1 b2 br)
+(define (xoro b0 b1 br)
     (conde 
-        ((== b1 1) (== b2 1) (== br 0))
-        ((== b1 0) (== b2 0) (== br 0))
-        ((== b1 1) (== b2 0) (== br 1))
-        ((== b1 0) (== b2 1) (== br 1))))
+        ((== b0 1) (== b1 1) (== br 0))
+        ((== b0 0) (== b1 0) (== br 0))
+        ((== b0 1) (== b1 0) (== br 1))
+        ((== b0 0) (== b1 1) (== br 1))))
 
 #|
 Decomposes fp number into sign, exponent, and mantissa
@@ -82,7 +82,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
   (conde ((== n '())
           (== frac result))
 
-         ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-bit)
+         ((fresh (n-first n-rest tmp b0 b1 b2 b3 b4 b5 b6 b7 next-bit)
             (== n (cons n-first n-rest))
 
             (conde ((== n-first 0)
@@ -90,16 +90,16 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
                    ((== n-first 1)
                     (conde
                         ((== curr-bit 1) ; remove 1 digit
-                         (== frac (cons b1 tmp)))
+                         (== frac (cons b0 tmp)))
 
                         ((== curr-bit 2) ; remove 2 digit
-                         (== frac `(,b1 ,b2 . ,tmp)))
+                         (== frac `(,b0 ,b1 . ,tmp)))
                         
                         ((== curr-bit 3) ; remove 4 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 . ,tmp)))
+                         (== frac `(,b0 ,b1 ,b2 ,b3 . ,tmp)))
                         
                         ((== curr-bit 4) ; remove 8 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 ,b8 . ,tmp))))))
+                         (== frac `(,b0 ,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 . ,tmp))))))
 
             (conde ((== curr-bit 1) (== next-bit 2))
                    ((== curr-bit 2) (== next-bit 3))
@@ -126,8 +126,8 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     Ensures that fraction contains exactly 16 bits.
 |#
 (define (frac-lengtho frac)
-    (fresh (b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16)
-        (== frac (list b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 b16))))
+    (fresh (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
+        (== frac (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15))))
 
 #|
 (drop-leastsig-bito frac fracr)
