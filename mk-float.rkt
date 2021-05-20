@@ -47,7 +47,9 @@
     Remove the zeros on the right side of lst.
 |#
 (define (dropr-zeroo lst stripped-lst)
-    (conde ((== lst '()) (== stripped-lst '()))
+    (conde 
+        ((== lst '()) (== stripped-lst '()))
+        
         ((fresh (last-bit lst-head) 
          (appendo lst-head (list last-bit) lst)
          (conde ((== last-bit 1) (== stripped-lst lst))
@@ -87,8 +89,8 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 (define (prepare-fraco expo frac prepared-frac)
     (fresh (frac-head last-bit)
         (conde 
-            ((poso expo) (== frac prepared-frac)) 
-            ((zeroo expo)
+            ((=/= expo '()) (== frac prepared-frac)) 
+            ((== expo '())
              (appendo frac-head (list last-bit) frac)
              (== last-bit 0)
              (dropr-zeroo frac prepared-frac)))))
@@ -102,7 +104,16 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     Removes n of the least significant bits from frac and equates that to result.
 |#
 (define (frac-shifto frac n result)
-    (fresh () (shifto-helper frac n result 1)))
+    (fresh (template remain remain-first remain-rest b0 b1 b2 b3)
+        (== template (list b0 b1 b2 b3)
+
+        (conde 
+            ((appendo n remain template) ;captures when length n <= 4
+             (shifto-helper frac n result 1))
+            
+            ((== remain (cons remain-first remain-rest)); Remainder of list cannot be empty
+             (appendo template remain n); Together with above captures length n > 4 -> n >= 16
+             (== result '()))))))
 
 #|
 (advance-bit#o bit next-bit)
@@ -129,70 +140,68 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     Removes n of the least significant bits from frac and equates that to result.
 |#
 (define (shifto-helper frac n result curr-bit)
-  (conde ((== n '())
-          (== frac result))
+  (conde 
+        ((== n '())
+         (== frac result))
 
-         ((== curr-bit 5);  This corresponds to removing >= 16 bits so the result is gauranteed to be '()
-          (== result '()))
+        (
+         (fresh (n-first n-rest next-bit next-n next-frac)
+         (== n (cons n-first n-rest))
+         (conde 
+            ((== n-first 0) (== next-frac frac) (== next-n n-rest))
 
-         ((fresh (n-first n-rest next-bit next-n next-frac)
-            (== n (cons n-first n-rest))
-
-            (conde 
-                ((== n-first 0) (== next-frac frac) (== next-n n-rest))
-
-                ((== n-first 1)
-                 (conde
-                    ((== curr-bit 1) ; removing 1 digit
-                        (fresh (remain b0) 
-                            (conde 
-                                ((== frac `(,b0 . ,remain)) ; Captures when (length frac) >= 1
-                                 (== next-frac remain)
-                                 (== next-n n-rest))
-                                                                
-                                ((== frac '()) 
-                                 (== next-frac '())
-                                 (== next-n '())))))
-                         
-                        ((== curr-bit 2) ; remove 2 digit
-                         (fresh (template remain b0 b1)
-                            (== template (list b0 b1))
-                            (conde 
-                                ((appendo template remain frac) ; Captures when (length frac) >= 2
-                                 (== next-frac remain)
-                                 (== next-n n-rest))
-
-                                ((=/= remain '())
-                                 (appendo frac remain template) ; Captures when (length frac) < 2 
-                                 (== next-frac '())
-                                 (== next-n '())))))
+            ((== n-first 1)
+                (conde
+                ((== curr-bit 1) ; removing 1 binary digit
+                    (fresh (remain b0) 
+                        (conde 
+                            ((== frac (cons b0 remain)) ; Captures when (length frac) >= 1
+                                (== next-frac remain)
+                                (== next-n n-rest))
+                                                            
+                            ((== frac '()) 
+                                (== next-frac '())
+                                (== next-n '())))))
                         
-                        ((== curr-bit 3) ; remove 4 digits
-                         (fresh (template remain b0 b1 b2 b3) 
-                            (== template (list b0 b1 b2 b3))
-                            (conde
-                                ((appendo template remain frac) ; Captures when (length frac) >= 4
-                                 (== next-frac remain)
-                                 (== next-n n-rest)) 
-                                 
-                                ((=/= remain '())
-                                 (appendo frac remain template) ; Captures when (length frac) < 4
-                                 (== next-frac '())
-                                 (== next-n '())))))
-                        
-                        ((== curr-bit 4) ; remove 8 digits
-                         (fresh (template remain b0 b1 b2 b3 b4 b5 b6 b7)
-                            (== template (list b0 b1 b2 b3 b4 b5 b6 b7)) 
-                            (conde 
-                                ((appendo template remain frac) ; Captures when (length frac) >= 4
-                                 (== next-frac remain)
-                                 (== next-n n-rest))
+                    ((== curr-bit 2) ; remove 2 binary digits
+                        (fresh (template remain b0 b1)
+                        (== template (list b0 b1))
+                        (conde 
+                            ((appendo template remain frac) ; Captures when (length frac) >= 2
+                                (== next-frac remain)
+                                (== next-n n-rest))
 
-                                ((=/= remain '())
-                                 (appendo frac remain template) ; Captures when (length frac) < 4
-                                 (== next-frac '())
-                                 (== next-n '()))))))))
-            
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 2 
+                                (== next-frac '())
+                                (== next-n '())))))
+                    
+                    ((== curr-bit 3) ; remove 4 binary digits
+                        (fresh (template remain b0 b1 b2 b3) 
+                        (== template (list b0 b1 b2 b3))
+                        (conde
+                            ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                (== next-frac remain)
+                                (== next-n n-rest)) 
+                                
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 4
+                                (== next-frac '())
+                                (== next-n '())))))
+                    
+                    ((== curr-bit 4) ; remove 8 binary digits
+                        (fresh (template remain b0 b1 b2 b3 b4 b5 b6 b7)
+                        (== template (list b0 b1 b2 b3 b4 b5 b6 b7)) 
+                        (conde 
+                            ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                (== next-frac remain)
+                                (== next-n n-rest))
+
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 4
+                                (== next-frac '())
+                                (== next-n '()))))))))
+        
             (advance-bit#o curr-bit next-bit)
             
             (shifto-helper next-frac next-n result next-bit) ))))
