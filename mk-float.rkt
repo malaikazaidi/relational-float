@@ -105,6 +105,21 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     (fresh () (shifto-helper frac n result 1)))
 
 #|
+(advance-bit#o bit next-bit)
+    curr-bit: The current bit of an oleg number we are iterating over.
+    next-bit: The next bit of an oleg number we are iterating over.
+
+    (== nextbit (+ 1 bit))
+|#
+(define (advance-bit#o bit next-bit)
+    (fresh () 
+        (conde 
+            ((== bit 1) (== next-bit 2))
+            ((== bit 2) (== next-bit 3))
+            ((== bit 3) (== next-bit 4))
+            ((== bit 4) (== next-bit 5)))))
+
+#|
 (shifto-helper frac n result curr-bit)
     frac: The fraction of a MKFP number. 
     n: the number of least-significant bits from frac to remove.
@@ -117,31 +132,70 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
   (conde ((== n '())
           (== frac result))
 
-         ((fresh (n-first n-rest tmp b1 b2 b3 b4 b5 b6 b7 b8 next-bit)
+         ((== curr-bit 5);  This corresponds to removing >= 16 bits so the result is gauranteed to be '()
+          (== result '()))
+
+         ((fresh (n-first n-rest next-bit next-n next-frac)
             (== n (cons n-first n-rest))
 
-            (conde ((== n-first 0)
-                    (== frac tmp))
-                   ((== n-first 1)
-                    (conde
-                        ((== curr-bit 1) ; remove 1 digit
-                         (== frac (cons b1 tmp)))
+            (conde 
+                ((== n-first 0) (== next-frac frac) (== next-n n-rest))
 
+                ((== n-first 1)
+                 (conde
+                    ((== curr-bit 1) ; removing 1 digit
+                        (fresh (remain b0) 
+                            (conde 
+                                ((== frac `(,b0 . ,remain)) ; Captures when (length frac) >= 1
+                                 (== next-frac remain)
+                                 (== next-n n-rest))
+                                                                
+                                ((== frac '()) 
+                                 (== next-frac '())
+                                 (== next-n '())))))
+                         
                         ((== curr-bit 2) ; remove 2 digit
-                         (== frac `(,b1 ,b2 . ,tmp)))
+                         (fresh (template remain b0 b1)
+                            (== template (list b0 b1))
+                            (conde 
+                                ((appendo template remain frac) ; Captures when (length frac) >= 2
+                                 (== next-frac remain)
+                                 (== next-n n-rest))
+
+                                ((=/= remain '())
+                                 (appendo frac remain template) ; Captures when (length frac) < 2 
+                                 (== next-frac '())
+                                 (== next-n '())))))
                         
                         ((== curr-bit 3) ; remove 4 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 . ,tmp)))
+                         (fresh (template remain b0 b1 b2 b3) 
+                            (== template (list b0 b1 b2 b3))
+                            (conde
+                                ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                 (== next-frac remain)
+                                 (== next-n n-rest)) 
+                                 
+                                ((=/= remain '())
+                                 (appendo frac remain template) ; Captures when (length frac) < 4
+                                 (== next-frac '())
+                                 (== next-n '())))))
                         
                         ((== curr-bit 4) ; remove 8 digits
-                         (== frac `(,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 ,b8 . ,tmp))))))
+                         (fresh (template remain b0 b1 b2 b3 b4 b5 b6 b7)
+                            (== template (list b0 b1 b2 b3 b4 b5 b6 b7)) 
+                            (conde 
+                                ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                 (== next-frac remain)
+                                 (== next-n n-rest))
 
-            (conde ((== curr-bit 1) (== next-bit 2))
-                   ((== curr-bit 2) (== next-bit 3))
-                   ((== curr-bit 3) (== next-bit 4))
-                   ((== curr-bit 4) (== next-bit 5)))
+                                ((=/= remain '())
+                                 (appendo frac remain template) ; Captures when (length frac) < 4
+                                 (== next-frac '())
+                                 (== next-n '()))))))))
             
-            (shifto-helper tmp n-rest result next-bit)))))
+            (advance-bit#o curr-bit next-bit)
+            
+            (shifto-helper next-frac next-n result next-bit) ))))
 
 #|
 (expo-lengtho expo)
