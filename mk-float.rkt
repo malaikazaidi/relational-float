@@ -28,12 +28,28 @@
         ((== b0 0) (== b1 1) (== br 1))))
 
 #|
+(noto a not-a)
+    a: 0 or 1
+    not-a: The result of ~a.
+    Negates the bit a, i.e negation relation.
+|#  
+(define (noto a not-a)
+    (conde ((== a 1)
+            (== not-a 0))
+           ((== a 0)
+            (== not-a 1))))
+
+#|
 Decomposes fp number into sign, exponent, and mantissa
 |#
 (define (fp-decompo fp sign expo frac)
-    (fresh ()
+    (fresh (frac-head)
         (== fp (list sign expo frac))
-        (frac-lengtho frac)))
+        (frac-lengtho frac)
+        (conde 
+            ((appendo frac-head (list 1) frac))
+            ((== frac (make-list 16 0))
+             (== expo '())))))
 
 #|
 (not-specialvalo fp)
@@ -55,7 +71,30 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     Removes n of the least significant bits from frac and equates that to result.
 |#
 (define (frac-shifto frac n result)
-    (fresh () (shifto-helper frac n result 1)))
+    (fresh (template remain remain-first remain-rest b0 b1 b2 b3)
+        (== template (list b0 b1 b2 b3))
+
+        (conde 
+            ((appendo n remain template) ;captures when length n <= 4
+             (shifto-helper frac n result 1))
+            
+            ((== remain (cons remain-first remain-rest)); Remainder of list cannot be empty
+             (appendo template remain n); Together with above captures length n > 4 -> n >= 16
+             (== result '())))))
+
+#|
+(advance-bit#o bit next-bit)
+    curr-bit: The current bit of an oleg number we are iterating over.
+    next-bit: The next bit of an oleg number we are iterating over.
+    (== nextbit (+ 1 bit))
+|#
+(define (advance-bit#o bit next-bit)
+    (fresh () 
+        (conde 
+            ((== bit 1) (== next-bit 2))
+            ((== bit 2) (== next-bit 3))
+            ((== bit 3) (== next-bit 4))
+            ((== bit 4) (== next-bit 5)))))
 
 #|
 (shifto-helper frac n result curr-bit)
@@ -67,34 +106,70 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
     Removes n of the least significant bits from frac and equates that to result.
 |#
 (define (shifto-helper frac n result curr-bit)
-  (conde ((== n '())
-          (== frac result))
+  (conde 
+        ((== n '())
+         (== frac result))
 
-         ((fresh (n-first n-rest tmp b0 b1 b2 b3 b4 b5 b6 b7 next-bit)
-            (== n (cons n-first n-rest))
+        ((fresh (n-first n-rest next-bit next-n next-frac)
+         (== n (cons n-first n-rest))
+         (conde 
+            ((== n-first 0) (== next-frac frac) (== next-n n-rest))
 
-            (conde ((== n-first 0)
-                    (== frac tmp))
-                   ((== n-first 1)
-                    (conde
-                        ((== curr-bit 1) ; remove 1 digit
-                         (== frac (cons b0 tmp)))
-
-                        ((== curr-bit 2) ; remove 2 digit
-                         (== frac `(,b0 ,b1 . ,tmp)))
+            ((== n-first 1)
+                (conde
+                ((== curr-bit 1) ; removing 1 binary digit
+                    (fresh (remain b0) 
+                        (conde 
+                            ((== frac (cons b0 remain)) ; Captures when (length frac) >= 1
+                                (== next-frac remain)
+                                (== next-n n-rest))
+                                                            
+                            ((== frac '()) 
+                                (== next-frac '())
+                                (== next-n '())))))
                         
-                        ((== curr-bit 3) ; remove 4 digits
-                         (== frac `(,b0 ,b1 ,b2 ,b3 . ,tmp)))
-                        
-                        ((== curr-bit 4) ; remove 8 digits
-                         (== frac `(,b0 ,b1 ,b2 ,b3 ,b4 ,b5 ,b6 ,b7 . ,tmp))))))
+                ((== curr-bit 2) ; remove 2 binary digits
+                    (fresh (template remain b0 b1)
+                        (== template (list b0 b1))
+                        (conde 
+                            ((appendo template remain frac) ; Captures when (length frac) >= 2
+                                (== next-frac remain)
+                                (== next-n n-rest))
 
-            (conde ((== curr-bit 1) (== next-bit 2))
-                   ((== curr-bit 2) (== next-bit 3))
-                   ((== curr-bit 3) (== next-bit 4))
-                   ((== curr-bit 4) (== next-bit 5)))
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 2 
+                                (== next-frac '())
+                                (== next-n '())))))
+                
+                ((== curr-bit 3) ; remove 4 binary digits
+                    (fresh (template remain b0 b1 b2 b3) 
+                        (== template (list b0 b1 b2 b3))
+                        (conde
+                            ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                (== next-frac remain)
+                                (== next-n n-rest)) 
+                                
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 4
+                                (== next-frac '())
+                                (== next-n '())))))
+                
+                ((== curr-bit 4) ; remove 8 binary digits
+                    (fresh (template remain b0 b1 b2 b3 b4 b5 b6 b7)
+                        (== template (list b0 b1 b2 b3 b4 b5 b6 b7)) 
+                        (conde 
+                            ((appendo template remain frac) ; Captures when (length frac) >= 4
+                                (== next-frac remain)
+                                (== next-n n-rest))
+
+                            ((=/= remain '())
+                                (appendo frac remain template) ; Captures when (length frac) < 4
+                                (== next-frac '())
+                                (== next-n '()))))))))
+        
+            (advance-bit#o curr-bit next-bit)
             
-            (shifto-helper tmp n-rest result next-bit)))))
+            (shifto-helper next-frac next-n result next-bit) ))))
 
 #|
 (expo-lengtho expo)
@@ -124,10 +199,11 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 
 Drops least significant bit in the fraction, where cap is 24 bits.
 |#
-(define (drop-leastsig-bito frac fracr)
-    (fresh (bit)
+(define (drop-leastsig-bito frac fracr bit)
+    (fresh ()
         (frac-lengtho fracr)
         (appendo bit fracr frac)))
+
 
 #|
 (bias-shifted-pluso expo1 expo2 rexpo)
@@ -139,30 +215,6 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     (fresh (exposum) 
         (pluso expo1 expo2 exposum)
         (pluso BIAS rexpo exposum)))
-
-#|
-(fp-pluso-normalize-expo frac frac-sum expo norm-expo)
-    frac: The fraction of the MKFP number with the larger exponent.
-    expo: The corresponding exponent of the MKFP number containing frac. 
-    frac-sum: The result of the Oleg addition of the two fractions being added.
-    norm-expo: The result of normalizing the exponent.
-
-    Normalize the exponent (expo) based on the values of frac and frac-sum. 
-    (adds one to expo when the addition rolls to a new bit position.)
-|# 
-(define (fp-pluso-normalize-expo frac expo frac-sum norm-expo)
-    (conde ((== frac '())
-            (== frac-sum '())
-            (== expo norm-expo))
-           
-           ((== frac '())
-            (=/= frac-sum '())
-            (pluso '(1) expo norm-expo))
-
-           ((fresh (fracfst fracrst frac-sumfst frac-sumrst)
-                (== frac (cons fracfst fracrst))
-                (== frac-sum (cons frac-sumfst frac-sumrst))
-                (fp-pluso-normalize-expo fracrst expo frac-sumrst norm-expo)))))
 
 #|
 (fp-multo-normalize-expo expo frac-prod norm-expo)
@@ -210,17 +262,18 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     Floating-Point Addition for same signs
 |#
 (define (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
-    (fresh (shifted-frac1 frac-sum)
+    (fresh (shifted-frac1 frac-sum bit)
         (== sign1 sign2)
         (== rsign sign1); Ensure the signs are all the same before continuing
 
         ;shift the frac of the SMALLER exponent
         (frac-shifto frac1 expo-diff shifted-frac1)
-        ; exponent shift to normalize
-        (fp-pluso-normalize-expo frac2 expo2 frac-sum rexpo)
-                 
-        (drop-leastsig-bito frac-sum rfrac)
-                  
+        
+        (conde ((== bit '()) (== rexpo expo2))
+               ((=/= bit '()) (pluso '(1) expo2 rexpo)))
+        (drop-leastsig-bito frac-sum rfrac bit)
+        
+
         ; oleg number addition
         (pluso shifted-frac1 frac2 frac-sum)))
 
@@ -273,11 +326,11 @@ Drops least significant bit in the fraction, where cap is 24 bits.
             ;When r has the same sign as f2 (-)
             ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
             ;fp-pluso (r, -f1, f2)
-            ((=/= sign1 sign2)
+            ((noto sign1 sign2)
              (== sign1 rsign)
              (fp-swapo sign1 expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
 
-            ((=/= sign1 sign2)
+            ((noto sign1 sign2)
              (== sign2 rsign)
              (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))))
 
