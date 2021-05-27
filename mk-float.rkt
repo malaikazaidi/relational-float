@@ -2,7 +2,7 @@
 
 (require "mk.rkt")
 (require "numbers.rkt")
-;(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
+(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
 (provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
@@ -11,18 +11,6 @@
                        expo ; Oleg number
                        frac)) ; kind of Oleg number?))
 
-#|
-(noto a not-a)
-    a: 0 or 1
-    not-a: The result of ~a.
-
-    Negates the bit a, i.e negation relation.
-|#  
-(define (noto a not-a)
-    (conde ((== a 1)
-            (== not-a 0))
-           ((== a 0)
-            (== not-a 1))))
 
 #|
 (xoro b0 b1 br)
@@ -278,7 +266,6 @@ Drops least significant bit in the fraction, where cap is 24 bits.
              (== sign2 rsign)
              (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
           
-
             ;Approach when signs are opposite
             ;When r has the same sign as f1 (+)
             ;f1+(-f2) = r -> f1 = r + f2
@@ -287,14 +274,12 @@ Drops least significant bit in the fraction, where cap is 24 bits.
             ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
             ;fp-pluso (r, -f1, f2)
             ((=/= sign1 sign2)
-             (fresh (newsign)
-                (conde ((== sign1 rsign)
-                        (noto sign2 newsign)
-                        (fp-swapo newsign expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
+             (== sign1 rsign)
+             (fp-swapo sign1 expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
 
-                       ((== sign2 rsign)
-                        (noto sign1 newsign)
-                        (fp-swapo newsign expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2))))))))
+            ((=/= sign1 sign2)
+             (== sign2 rsign)
+             (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))))
 
 
 #|
