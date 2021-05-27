@@ -85,9 +85,25 @@
     If s_0, s_1, ..., s_n are the strings contained in msgs, then we return the string 
     "s_0 AND s_1 AND s_2 ... AND s_n".
 |#
-(define (build-err-msg msgs)
-    (foldl err-msg-folder (first msgs) (rest msgs)))
+(define/match (build-err-msg msgs)
+    [('()) ""]
+    [(msgs) (foldl err-msg-folder (first msgs) (rest msgs))])
 
+
+#|
+(equality-error-msg sign-eq? exp-eq? man-eq?)
+    sign-eq?: a boolean indicating that the signs of two MKFP numbers are equal.
+    exp-eq?: a boolean indicating that the exponents of two MKFP numbers are equal.
+    man-eq?: a boolean indicating that the mantissas of two MKFP numbers are equal.
+|#
+(define (equality-error-msg sign-eq? exp-eq? man-eq?)
+    (let* 
+        ([sign-msg (if sign-eq? "" "SIGNS NOT EQUAL")]
+         [man-msg (if man-eq? "" "MANTISSA NOT EQUAL")]
+         [exp-msg (if exp-eq? "" "EXPONENTS NOT EQUAL")]
+         [msgs (filter (lambda (msg) (not (equal? "" msg))) (list sign-msg exp-msg man-msg))])
+
+        (build-err-msg msgs)))
 
 #|
 (examine-fps fp1 fp2)
@@ -101,24 +117,21 @@
     (let* ([sign1 (get-sign fp1)]
            [sign2 (get-sign fp2)]
            [sign-equal? (equal? sign1 sign2)]
-           [sign-msg (if sign-equal? "" "SIGNS NOT EQUAL")]
 
            [man1 (get-frac fp1)]
            [man2 (get-frac fp2)]
            [man-equal? (equal? man1 man2)]
-           [man-msg (if man-equal? "" "MANTISSA NOT EQUAL")]
            
            [exp1 (get-exp fp1)]
            [exp2 (get-exp fp2)]
            [exp-equal? (equal? exp1 exp2)]
-           [exp-msg (if exp-equal? "" "EXPONENTS NOT EQUAL")]
 
-           [msgs (filter (lambda (msg) (not (equal? "" msg))) (list sign-msg exp-msg man-msg))]
+           [msg (equality-error-msg sign-equal? exp-equal? man-equal?)]
 
            [equal (and sign-equal? man-equal? exp-equal?)]) 
         (cond
-         [equal "eq"]
-         [else (build-err-msg msgs)])))
+         [(equal? msg "") "eq"]
+         [else msg])))
 
 #|
 (check-fp-equal? fp1 fp2)
@@ -132,6 +145,38 @@
           (cond
             [(equal? examination-result "eq") (void)]
             [else (fail-check examination-result)])))
+
+#|
+(check-fp-equal/unify? fp1 fp2)
+    fp1: A miniKanren floating point number
+    fp2: A miniKanren floating point number
+
+    A check that determines if fp1 and fp2 can be unified. If they cannot be unified,
+    the error msg says exactly what is not equal.
+|#
+(define-check (check-fp-equal/unify? fp1 fp2)
+    (let* 
+        ([sign-fp1 (first fp1)]
+         [sign-fp2 (first fp2)]
+         
+         [exp-fp1  (second fp1)]
+         [exp-fp2  (second fp2)]
+
+         [man-fp1  (third fp1)]
+         [man-fp2  (third fp2)]
+
+         [sign-check (length (run 1 (x) (== sign-fp1 sign-fp2)))]
+         [exp-check  (length (run 1 (x) (== exp-fp1 exp-fp2)))]
+         [man-check  (length (run 1 (x) (== man-fp1 man-fp2)))]
+
+         [sign-equal? (equal? sign-check 1)]
+         [exp-equal?  (equal? exp-check 1)]
+         [man-equal?  (equal? man-check 1)]
+
+         [msg (equality-error-msg sign-equal? exp-equal? man-equal?)]) 
+        (cond
+            [(equal? "" msg) (void)]
+            [else (fail-check msg)])))
 
 #|
 (check-list-fp-helper fp1s fp2s n)

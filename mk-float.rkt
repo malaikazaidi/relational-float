@@ -2,7 +2,7 @@
 
 (require "mk.rkt")
 (require "numbers.rkt")
-;(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
+(require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
 (provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-=)
 
 (define BIAS (build-num 127))
