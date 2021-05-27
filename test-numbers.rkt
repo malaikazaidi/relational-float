@@ -83,3 +83,6 @@
 (define n46.552 (build-truncated-float -46.552))
 (define n6.3 (build-truncated-float -6.3))
 (define n28.35 (build-truncated-float -28.35))
+(define dn1 '(0 () (0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 0)))
+(define dn2 '(0 () (0 0 0 1  0 0 1 0  0 0 0 0  0 0 0 0)))
+

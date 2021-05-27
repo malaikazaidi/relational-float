@@ -96,6 +96,35 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
              (dropr-zeroo frac prepared-frac)))))
 
 #|
+(list-templateo lst template)
+    lst: a list to create a template from,
+    template: A list of logic variables with the same length as lst.
+
+    Ensures template is a list containing the same number of logic variables as elements in lst. 
+|#
+(define (list-templateo lst template)
+    (list-templateo-helper lst template '()))
+
+(define (list-templateo-helper lst template acc)
+    (conde 
+        ((== lst '()) (== acc template))
+        ((fresh (lst-first lst-rest next-acc lvar)
+            (== lst (cons lst-first lst-rest))
+            (== next-acc (cons lvar acc))
+            (list-templateo-helper lst-rest template next-acc)))) )
+
+#|
+(list-compare-lengtho lst1 lst2 rem)
+    lst1: A list
+    lst2: A second list
+    rem: A list of length (length lst2) - (length lst1)
+|#
+(define (list-compare-lengtho lst1 lst2 rem)
+    (fresh (template)
+        (list-templateo lst1 template)
+        (appendo template rem lst2)))
+
+#|
 (frac-shifto frac n result)
     frac: The fraction of a MKFP number. 
     n: the number of least-significant bits from frac to remove.
@@ -105,7 +134,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
 (define (frac-shifto frac n result)
     (fresh (template remain remain-first remain-rest b0 b1 b2 b3)
-        (== template (list b0 b1 b2 b3)
+        (== template (list b0 b1 b2 b3))
 
         (conde 
             ((appendo n remain template) ;captures when length n <= 4
@@ -113,7 +142,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
             
             ((== remain (cons remain-first remain-rest)); Remainder of list cannot be empty
              (appendo template remain n); Together with above captures length n > 4 -> n >= 16
-             (== result '()))))))
+             (== result '())))))
 
 #|
 (advance-bit#o bit next-bit)
@@ -320,20 +349,35 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     Floating-Point Addition for same signs
 |#
 (define (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
-    (fresh (shifted-frac1 frac-sum)
+    (fresh (shifted-frac1 oleg-man1 oleg-man2 oleg-manr rem truncated-rfrac)
         (== sign1 sign2)
         (== rsign sign1); Ensure the signs are all the same before continuing
 
         ;shift the frac of the SMALLER exponent
         (frac-shifto frac1 expo-diff shifted-frac1)
-        ; exponent shift to normalize
-        (fp-pluso-normalize-expo frac2 expo2 frac-sum rexpo)
-                 
-        ;drop least-sig bit
-        (drop-leastsig-bito frac-sum rfrac)
-                  
+
+        (prepare-fraco expo1 shifted-frac1 oleg-man1)
+        (prepare-fraco expo2 frac2 oleg-man2)
+
+        (conde 
+            ((== rexpo '())
+             (prepare-fraco rexpo rfrac oleg-manr))
+            
+            ((=/= rexpo '()) 
+             (drop-leastsig-bito oleg-manr rfrac)))
+
+        
+
+        (list-compare-lengtho oleg-man2 oleg-manr rem)
+        (conde 
+            ((== rem '()) (== rexpo expo2))
+
+            ((=/= rem '()) (pluso '(1) expo2 rexpo)))
+
         ; oleg number addition
-        (pluso shifted-frac1 frac2 frac-sum)))
+        (pluso oleg-man1 oleg-man2 oleg-manr)
+        ))
+
 
 #|
 (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
@@ -368,22 +412,16 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     General Floating-Point Addition
 |#
 (define (fp-pluso f1 f2 r)
-    (fresh (sign1 expo1 frac1 prepared-frac1
-            sign2 expo2 frac2 prepared-frac2
-            rsign rexpo rfrac prepared-rfrac)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
 
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
 
-        (prepare-fraco expo1 frac1 prepared-frac1)
-        (prepare-fraco expo2 frac2 prepared-frac2)
-        (prepare-fraco rexpo rfrac prepared-rfrac)
-
         (conde 
             ((== sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign1 expo1 prepared-frac1 sign2 expo2 prepared-frac2 rsign rexpo prepared-rfrac))
+             (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
           
 
             ;Approach when signs are opposite
@@ -397,11 +435,11 @@ Drops least significant bit in the fraction, where cap is 24 bits.
              (fresh (newsign)
                 (conde ((== sign1 rsign)
                         (noto sign2 newsign)
-                        (fp-swapo newsign expo2 prepared-frac2 rsign rexpo prepared-rfrac sign1 expo1 prepared-frac1))
+                        (fp-swapo newsign expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
 
                        ((== sign2 rsign)
                         (noto sign1 newsign)
-                        (fp-swapo newsign expo1 prepared-frac1 rsign rexpo prepared-rfrac sign2 expo2 prepared-frac2))))))))
+                        (fp-swapo newsign expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2))))))))
 
 
 #|
