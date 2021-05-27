@@ -84,3 +84,5 @@
 (define n6.3 (build-truncated-float -6.3))
 (define n28.35 (build-truncated-float -28.35))
 (define pi (build-truncated-float 3.14))
+(define 100pi (build-truncated-float 314))
+(define p100 (build-truncated-float 100))
