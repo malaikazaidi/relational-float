@@ -1,6 +1,6 @@
 #lang racket
 
-(require rackunit rackunit/text-ui "mk.rkt" "float.rkt" "mk-float.rkt" "test-numbers.rkt")
+(require rackunit rackunit/text-ui "mk.rkt" "float.rkt" "mk-float.rkt")
 (provide create-mk-length< create-mk-length> create-mk-length= check-mk-pred check-mk-length> check-mk-length< check-mk-length= check-fp-equal?
          check-list-fp-equal? check-results-fp-equal? check-results-list-fp-equal? run/time test/fp-relation-r)
 
@@ -207,7 +207,7 @@ A check to determine where the two parallel lists of mk
               (check-mk-length= results <expected-n>)
               (<check> (if (equal? <check-args> 'results) results <check-args>) ... ) ...))]))
 
-(define test 
+#;(define test 
     (test-suite "macro check"
 
         (test/fp-relation-r "x*1 = 2" ((fp-multo x one two) (x))

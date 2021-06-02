@@ -102,4 +102,4 @@
 ;(displayln "Tests for different sign fp numbers")
 ;(run-tests nonequal-signs-test)
 
-(run-tests unknown-signs)
+;(run-tests unknown-signs)

@@ -344,7 +344,7 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     General Floating Point Addition
 |#
 (define (fp-multo f1 f2 r)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo pre-fracr)
+    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo pre-fracr template throw-out template-end ls-bits rem)
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
@@ -353,11 +353,21 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (not-specialvalo f2)
          
         (xoro sign1 sign2 rsign)
-        (drop-leastsig-bito pre-fracr rfrac)
+
+        (drop-leastsig-bito pre-fracr rfrac ls-bits)
+
+        (frac-lengtho template); create a template with 16 bits
+        (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
+
+        (appendo template-end rem ls-bits); fit the least significant bits to the template.
+
+        (conde 
+            ((== rem '())
+             (== rexpo pre-rexpo))
+            ((=/= rem '())
+             (pluso '(1) pre-rexpo rexpo)))
          
-        (fp-multo-normalize-expo pre-rexpo pre-fracr rexpo)
-         
-        (*o frac1 frac2 pre-fracr)
+        (*o frac1 frac2 pre-fracr); 31 or > 31 bits.
         (bias-shifted-pluso expo1 expo2 pre-rexpo)
 
         (expo-lengtho expo1)
