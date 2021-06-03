@@ -3,9 +3,10 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
-(provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-=)
+(provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-= precision)
 
 (define BIAS (build-num 127))
+(define precision 16)
 
 (define float-format '(sign
                        expo ; Oleg number
@@ -48,7 +49,7 @@ Decomposes fp number into sign, exponent, and mantissa
         (frac-lengtho frac)
         (conde 
             ((appendo frac-head (list 1) frac))
-            ((== frac (make-list 16 0))
+            ((== frac (make-list precision 0))
              (== expo '())))))
 
 #|
@@ -68,7 +69,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
             ((== sign 0))
             ((== sign 1)))
         (== expo '())
-        (== mant '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0))))
+        (== mant (make-list precision 0))))
 
 (define (fp-notzeroo sign expo mant)
     (fresh ()
@@ -76,7 +77,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
             ((== sign 0))
             ((== sign 1)))
         (=/= expo '())
-        (=/= mant '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0))))
+        (=/= mant (make-list precision 0))))
 
 
 
@@ -208,7 +209,8 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
 (define (frac-lengtho frac)
     (fresh (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
-        (== frac (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15))))
+        (== frac (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
+)))
 
 #|
 (drop-leastsig-bito frac fracr)
