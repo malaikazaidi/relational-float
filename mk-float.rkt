@@ -62,6 +62,24 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
         (fp-decompo fp sign expo frac)
         (=/= expo '(1 1 1 1  1 1 1 1)))) 
 
+(define (fp-zeroo sign expo mant)
+    (fresh ()
+        (conde 
+            ((== sign 0))
+            ((== sign 1)))
+        (== expo '())
+        (== mant '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0))))
+
+(define (fp-notzeroo sign expo mant)
+    (fresh ()
+        (conde 
+            ((== sign 0))
+            ((== sign 1)))
+        (=/= expo '())
+        (=/= mant '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0))))
+
+
+
 #|
 (frac-shifto frac n result)
     frac: The fraction of a MKFP number. 
@@ -217,36 +235,6 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (pluso BIAS rexpo exposum)))
 
 #|
-(fp-multo-normalize-expo expo frac-prod norm-expo)
-    expo: The exponent of the product before normalization
-    frac-prod: The fractoin of the product before dropping the least significant bits.
-    norm-expo: The normalized exponent based off of expo and frac-prod. 
-
-    Normalizes the exponent in floating point multiplication.
-|#
-(define (fp-multo-normalize-expo expo frac-prod norm-expo)
-    (fresh (a b b-first b-rest rem temp)
-        ; a and b have the same length as pre-fracr
-        (frac-lengtho a)
-        (frac-lengtho b)
-
-        ; Decompose b into its first bit and remaining bits.
-        (== b (cons b-first b-rest))
-
-        ; Decompose pre-frac r into (a) ++ (b-rest) ++ (rem) 
-        ; (a) ++ (b-rest) length = 16 + 15 = 31 bits
-        (appendo a b-rest temp)
-        (appendo temp rem frac-prod)
-
-        ; rem == '()  --> length pre-fracr = 31
-        ; rem =/= '() --> length pre-fracr >= 32
-        (conde 
-            ((== rem '())
-             (== expo norm-expo))
-            ((=/= rem '())
-             (pluso '(1) expo norm-expo)))))
-
-#|
 (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
     sign1: The sign of the MKFP number with the smaller exponent
     expo1: The exponent of the MKFP number with the smaller exponent
@@ -314,8 +302,30 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
-        (conde 
-            ((== sign1 sign2)
+        (conde
+            ((fp-zeroo sign1 expo1 frac1); 0 + 0 = 0
+             (fp-zeroo sign2 expo2 frac2)
+             (fp-zeroo rsign rexpo rfrac))
+
+            ((fp-notzeroo sign1 expo1 frac1); x + 0 = x
+             (fp-zeroo sign2 expo2 frac2)
+             (fp-= f1 r))
+
+            ((fp-notzeroo sign2 expo2 frac2) ; 0 + y = y
+             (fp-zeroo sign1 expo1 frac1)
+             (fp-= f2 r))
+
+            ((fp-notzeroo sign1 expo1 frac1); (x) + (-x) = 0
+             (fp-notzeroo sign2 expo2 frac2)
+             (fp-zeroo rsign rexpo rfrac)
+             (noto sign1 sign2)
+             (== expo1 expo2)
+             (== frac1 frac2))
+
+            ((fp-notzeroo sign1 expo1 frac1)
+             (fp-notzeroo sign2 expo2 frac2)
+             (fp-notzeroo rsign rexpo rfrac)
+             (== sign1 sign2)
              (== sign2 rsign)
              (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
           
@@ -326,11 +336,17 @@ Drops least significant bit in the fraction, where cap is 24 bits.
             ;When r has the same sign as f2 (-)
             ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
             ;fp-pluso (r, -f1, f2)
-            ((noto sign1 sign2)
+            ((fp-notzeroo sign1 expo1 frac1)
+             (fp-notzeroo sign2 expo2 frac2)
+             (fp-notzeroo rsign rexpo rfrac)
+             (noto sign1 sign2)
              (== sign1 rsign)
              (fp-swapo sign1 expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
 
-            ((noto sign1 sign2)
+            ((fp-notzeroo sign1 expo1 frac1)
+             (fp-notzeroo sign2 expo2 frac2)
+             (fp-notzeroo rsign rexpo rfrac)
+             (noto sign1 sign2)
              (== sign2 rsign)
              (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))))
 
@@ -349,26 +365,35 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
 
-        (not-specialvalo f1)
-        (not-specialvalo f2)
-         
-        (xoro sign1 sign2 rsign)
-
-        (drop-leastsig-bito pre-fracr rfrac ls-bits)
-
-        (frac-lengtho template); create a template with 16 bits
-        (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
-
-        (appendo template-end rem ls-bits); fit the least significant bits to the template.
-
         (conde 
-            ((== rem '())
-             (== rexpo pre-rexpo))
-            ((=/= rem '())
-             (pluso '(1) pre-rexpo rexpo)))
+            ((fp-zeroo rsign rexpo rfrac)
+             (conde 
+                ((fp-zeroo sign1 expo1 frac1)) 
+                ((fp-zeroo sign2 expo2 frac2)))) 
+            
+            ((fp-notzeroo rsign rexpo rfrac)
+             (not-specialvalo f1)
+             (not-specialvalo f2)
          
-        (*o frac1 frac2 pre-fracr); 31 or > 31 bits.
-        (bias-shifted-pluso expo1 expo2 pre-rexpo)
+             (xoro sign1 sign2 rsign)
+
+             (drop-leastsig-bito pre-fracr rfrac ls-bits)
+
+             (frac-lengtho template); create a template with 16 bits
+             (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
+
+             (appendo template-end rem ls-bits); fit the least significant bits to the template.
+
+             (conde 
+                 ((== rem '())
+                 (== rexpo pre-rexpo))
+                 ((=/= rem '())
+                 (pluso '(1) pre-rexpo rexpo)))
+            
+             (*o frac1 frac2 pre-fracr); 31 or > 31 bits.
+             (bias-shifted-pluso expo1 expo2 pre-rexpo)))
+
+
 
         (expo-lengtho expo1)
         (expo-lengtho expo2)
@@ -425,6 +450,6 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
-        (conde ((== sign1 sign2)
-                (== expo1 expo2)
-                (== frac1 frac2)))))
+        (== sign1 sign2)
+        (== expo1 expo2)
+        (== frac1 frac2) ))

@@ -98,8 +98,8 @@
             (displayln 'results))))
 
 ;(displayln "Tests for same sign fp numbers")
-;(run-tests equal-signs-test)
+(run-tests equal-signs-test)
 ;(displayln "Tests for different sign fp numbers")
-;(run-tests nonequal-signs-test)
+(run-tests nonequal-signs-test)
 
 ;(run-tests unknown-signs)
