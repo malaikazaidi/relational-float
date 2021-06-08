@@ -3,14 +3,14 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
-(provide fp-pluso fp-multo frac-lengtho expo-lengtho fp-< fp-<= fp-= precision)
+(provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision)
 
 (define BIAS (build-num 127))
 (define precision 16)
 
 (define float-format '(sign
                        expo ; Oleg number
-                       frac)) ; kind of Oleg number?))
+                       mantissa)) ; kind of Oleg number?))
 
 
 #|
@@ -43,13 +43,13 @@
 #|
 Decomposes fp number into sign, exponent, and mantissa
 |#
-(define (fp-decompo fp sign expo frac)
-    (fresh (frac-head)
-        (== fp (list sign expo frac))
-        (frac-lengtho frac)
+(define (fp-decompo fp sign expo mantissa)
+    (fresh (mantissa-head)
+        (== fp (list sign expo mantissa))
+        (mantissa-lengtho mantissa)
         (conde 
-            ((appendo frac-head (list 1) frac))
-            ((== frac (make-list precision 0))
+            ((appendo mantissa-head (list 1) mantissa))
+            ((== mantissa (make-list precision 0))
              (== expo '())))))
 
 #|
@@ -59,45 +59,45 @@ Decomposes fp number into sign, exponent, and mantissa
 Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
 (define (not-specialvalo fp)
-    (fresh (sign expo frac)
-        (fp-decompo fp sign expo frac)
+    (fresh (sign expo mantissa)
+        (fp-decompo fp sign expo mantissa)
         (=/= expo '(1 1 1 1  1 1 1 1)))) 
 
-(define (fp-zeroo sign expo mant)
+(define (fp-zeroo sign expo mantissa)
     (fresh ()
         (conde 
             ((== sign 0))
             ((== sign 1)))
         (== expo '())
-        (== mant (make-list precision 0))))
+        (== mantissa (make-list precision 0))))
 
-(define (fp-notzeroo sign expo mant)
+(define (fp-notzeroo sign expo mantissa)
     (fresh ()
         (conde 
             ((== sign 0))
             ((== sign 1)))
         (=/= expo '())
-        (=/= mant (make-list precision 0))))
+        (=/= mantissa (make-list precision 0))))
 
 
 
 #|
-(frac-shifto frac n result)
-    frac: The fraction of a MKFP number. 
-    n: the number of least-significant bits from frac to remove.
-    result: The result of removing n of the least significant bits from frac.
+(mantissa-shifto mantissa n result)
+    mantissa: The mantissa of a MKFP number. 
+    n: the number of least-significant bits from mantissa to remove.
+    result: The result of removing n of the least significant bits from mantissa
 
-    Removes n of the least significant bits from frac and equates that to result.
+    Removes n of the least significant bits from mantissa and equates that to result.
 |#
-(define (frac-shifto frac n result)
-    (fresh (template remain remain-first remain-rest b0 b1 b2 b3)
+(define (mantissa-shifto mantissa n result)
+    (fresh (template remain b0 b1 b2 b3)
         (== template (list b0 b1 b2 b3))
 
         (conde 
             ((appendo n remain template) ;captures when length n <= 4
-             (shifto-helper frac n result 1))
+             (shifto-helper mantissa n result 1))
             
-            ((== remain (cons remain-first remain-rest)); Remainder of list cannot be empty
+            ((=/= remain '()); Remainder of list cannot be empty
              (appendo template remain n); Together with above captures length n > 4 -> n >= 16
              (== result '())))))
 
@@ -116,79 +116,79 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
             ((== bit 4) (== next-bit 5)))))
 
 #|
-(shifto-helper frac n result curr-bit)
-    frac: The fraction of a MKFP number. 
-    n: the number of least-significant bits from frac to remove.
-    result: The result of removing n of the least significant bits from frac.
+(shifto-helper mantissa n result curr-bit)
+    mantissa: The mantissa of a MKFP number. 
+    n: the number of least-significant bits from mantissa to remove.
+    result: The result of removing n of the least significant bits from mantissa
     curr-bit: The current bit of n that we are iterating on.
 
-    Removes n of the least significant bits from frac and equates that to result.
+    Removes n of the least significant bits from mantissa and equates that to result.
 |#
-(define (shifto-helper frac n result curr-bit)
+(define (shifto-helper mantissa n result curr-bit)
   (conde 
         ((== n '())
-         (== frac result))
+         (== mantissa result))
 
-        ((fresh (n-first n-rest next-bit next-n next-frac)
+        ((fresh (n-first n-rest next-bit next-n next-mantissa)
          (== n (cons n-first n-rest))
          (conde 
-            ((== n-first 0) (== next-frac frac) (== next-n n-rest))
+            ((== n-first 0) (== next-mantissa mantissa) (== next-n n-rest))
 
             ((== n-first 1)
                 (conde
                 ((== curr-bit 1) ; removing 1 binary digit
                     (fresh (remain b0) 
                         (conde 
-                            ((== frac (cons b0 remain)) ; Captures when (length frac) >= 1
-                                (== next-frac remain)
+                            ((== mantissa (cons b0 remain)) ; Captures when (length mantissa) >= 1
+                                (== next-mantissa remain)
                                 (== next-n n-rest))
                                                             
-                            ((== frac '()) 
-                                (== next-frac '())
+                            ((== mantissa '()) 
+                                (== next-mantissa '())
                                 (== next-n '())))))
                         
                 ((== curr-bit 2) ; remove 2 binary digits
                     (fresh (template remain b0 b1)
                         (== template (list b0 b1))
                         (conde 
-                            ((appendo template remain frac) ; Captures when (length frac) >= 2
-                                (== next-frac remain)
+                            ((appendo template remain mantissa) ; Captures when (length mantissa) >= 2
+                                (== next-mantissa remain)
                                 (== next-n n-rest))
 
                             ((=/= remain '())
-                                (appendo frac remain template) ; Captures when (length frac) < 2 
-                                (== next-frac '())
+                                (appendo mantissa remain template) ; Captures when (length mantissa) < 2 
+                                (== next-mantissa '())
                                 (== next-n '())))))
                 
                 ((== curr-bit 3) ; remove 4 binary digits
                     (fresh (template remain b0 b1 b2 b3) 
                         (== template (list b0 b1 b2 b3))
                         (conde
-                            ((appendo template remain frac) ; Captures when (length frac) >= 4
-                                (== next-frac remain)
+                            ((appendo template remain mantissa) ; Captures when (length mantissa) >= 4
+                                (== next-mantissa remain)
                                 (== next-n n-rest)) 
                                 
                             ((=/= remain '())
-                                (appendo frac remain template) ; Captures when (length frac) < 4
-                                (== next-frac '())
+                                (appendo mantissa remain template) ; Captures when (length mantissa) < 4
+                                (== next-mantissa '())
                                 (== next-n '())))))
                 
                 ((== curr-bit 4) ; remove 8 binary digits
                     (fresh (template remain b0 b1 b2 b3 b4 b5 b6 b7)
                         (== template (list b0 b1 b2 b3 b4 b5 b6 b7)) 
                         (conde 
-                            ((appendo template remain frac) ; Captures when (length frac) >= 4
-                                (== next-frac remain)
+                            ((appendo template remain mantissa) ; Captures when (length mantissa) >= 4
+                                (== next-mantissa remain)
                                 (== next-n n-rest))
 
                             ((=/= remain '())
-                                (appendo frac remain template) ; Captures when (length frac) < 4
-                                (== next-frac '())
+                                (appendo mantissa remain template) ; Captures when (length mantissa) < 4
+                                (== next-mantissa '())
                                 (== next-n '()))))))))
         
             (advance-bit#o curr-bit next-bit)
             
-            (shifto-helper next-frac next-n result next-bit) ))))
+            (shifto-helper next-mantissa next-n result next-bit) ))))
 
 #|
 (expo-lengtho expo)
@@ -202,27 +202,27 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
         (appendo expo r b))) ; ensure that expo (++) r = b
 
 #|
-(frac-lengtho frac)
-    frac: A Oleg number.
+(mantissa-lengtho mantissa)
+    mantissa: A Oleg number.
 
-    Ensures that fraction contains exactly 16 bits.
+    Ensures that the mantissa contains exactly 16 bits.
 |#
-(define (frac-lengtho frac)
+(define (mantissa-lengtho mantissa)
     (fresh (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
-        (== frac (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
+        (== mantissa (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
 )))
 
 #|
-(drop-leastsig-bito frac fracr)
-    frac: The fraction being created that may have more than 24 bits.
-    fracr: The MKFP fraction that takes the 24 most significant bits from frac.
+(drop-leastsig-bito mantissa rmantissa)
+    mantissa: The mantissa being created that may have more than 24 bits.
+    rmantissa: The MKFP mantissa that takes the 24 most significant bits from mantissa.
 
-Drops least significant bit in the fraction, where cap is 24 bits.
+Drops least significant bit in the mantissa, where cap is 24 bits.
 |#
-(define (drop-leastsig-bito frac fracr bit)
+(define (drop-leastsig-bito mantissa rmantissa bit)
     (fresh ()
-        (frac-lengtho fracr)
-        (appendo bit fracr frac)))
+        (mantissa-lengtho rmantissa)
+        (appendo bit rmantissa mantissa)))
 
 
 #|
@@ -237,59 +237,59 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (pluso BIAS rexpo exposum)))
 
 #|
-(fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
+(fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
     sign1: The sign of the MKFP number with the smaller exponent
     expo1: The exponent of the MKFP number with the smaller exponent
-    frac1: The fraction of the MKFP number with the smaller exponent
+    mant1: The mantissa of the MKFP number with the smaller exponent
     sign2: The sign of the MKFP number with the larger exponent
     expo2: The exponent of the MKFP number with the larger exponent
-    frac2: The fraction of the MKFP number with the larger exponent
+    mant2: The mantissa of the MKFP number with the larger exponent
     expo-diff: An Oleg number that equals (expo2 - expo1)
     rsign: The resulting sign of the addition f1 + f2
     rexpo: The resulting exponent of the addition f1 + f2
-    rfrac: The resulting fraction of the addition f1 + f2
+    rmant: The resulting mantissa of the addition f1 + f2
 
     Floating-Point Addition for same signs
 |#
-(define (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac)
-    (fresh (shifted-frac1 frac-sum bit)
+(define (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
+    (fresh (shifted-mant1 mant-sum bit)
         (== sign1 sign2)
         (== rsign sign1); Ensure the signs are all the same before continuing
 
-        ;shift the frac of the SMALLER exponent
-        (frac-shifto frac1 expo-diff shifted-frac1)
+        ;shift the mantissa of the SMALLER exponent
+        (mantissa-shifto mant1 expo-diff shifted-mant1)
         
         (conde ((== bit '()) (== rexpo expo2))
                ((=/= bit '()) (pluso '(1) expo2 rexpo)))
-        (drop-leastsig-bito frac-sum rfrac bit)
+        (drop-leastsig-bito mant-sum rmant bit)
         
 
         ; oleg number addition
-        (pluso shifted-frac1 frac2 frac-sum)))
+        (pluso shifted-mant1 mant2 mant-sum)))
 
 #|
-(fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+(fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
     sign1: The sign of the MKFP number with the smaller exponent
     expo1: The exponent of the MKFP number with the smaller exponent
-    frac1: The fraction of the MKFP number with the smaller exponent
+    mant1: The mantissa of the MKFP number with the smaller exponent
     sign2: The sign of the MKFP number with the larger exponent
     expo2: The exponent of the MKFP number with the larger exponent
-    frac2: The fraction of the MKFP number with the larger exponent
+    mant2: The mantissa of the MKFP number with the larger exponent
     rsign: The resulting sign of the addition f1 + f2
     rexpo: The resulting exponent of the addition f1 + f2
-    rfrac: The resulting fraction of the addition f1 + f2
+    rmant: The resulting mantissa of the addition f1 + f2
 
     Calls fp-samesignaddero so that the number out of f1 and f2 with the
     smaller exponent is entered first.
 |#
-(define (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
+(define (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
     (fresh (expo-diff)  
         (conde
             ((pluso expo-diff expo1 expo2)
-             (fp-samesignaddero sign1 expo1 frac1 sign2 expo2 frac2 expo-diff rsign rexpo rfrac))
+             (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant))
             ((=/= expo1 expo2)
              (pluso expo-diff expo2 expo1)
-             (fp-samesignaddero sign2 expo2 frac2 sign1 expo1 frac1 expo-diff rsign rexpo rfrac)))))
+             (fp-samesignaddero sign2 expo2 mant2 sign1 expo1 mant1 expo-diff rsign rexpo rmant)))))
 
 #|
 (fp-pluso f1 f2 r)
@@ -300,37 +300,37 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     General Floating-Point Addition
 |#
 (define (fp-pluso f1 f2 r)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac)
-        (fp-decompo f1 sign1 expo1 frac1)
-        (fp-decompo f2 sign2 expo2 frac2)
-        (fp-decompo r rsign rexpo rfrac)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+        (fp-decompo f1 sign1 expo1 mant1)
+        (fp-decompo f2 sign2 expo2 mant2)
+        (fp-decompo r rsign rexpo rmant)
         
         (conde
-            ((fp-zeroo sign1 expo1 frac1); 0 + 0 = 0
-             (fp-zeroo sign2 expo2 frac2)
-             (fp-zeroo rsign rexpo rfrac))
+            ((fp-zeroo sign1 expo1 mant1); 0 + 0 = 0
+             (fp-zeroo sign2 expo2 mant2)
+             (fp-zeroo rsign rexpo rmant))
 
-            ((fp-notzeroo sign1 expo1 frac1); x + 0 = x
-             (fp-zeroo sign2 expo2 frac2)
+            ((fp-notzeroo sign1 expo1 mant1); x + 0 = x
+             (fp-zeroo sign2 expo2 mant2)
              (fp-= f1 r))
 
-            ((fp-notzeroo sign2 expo2 frac2) ; 0 + y = y
-             (fp-zeroo sign1 expo1 frac1)
+            ((fp-notzeroo sign2 expo2 mant2) ; 0 + y = y
+             (fp-zeroo sign1 expo1 mant1)
              (fp-= f2 r))
 
-            ((fp-notzeroo sign1 expo1 frac1); (x) + (-x) = 0
-             (fp-notzeroo sign2 expo2 frac2)
-             (fp-zeroo rsign rexpo rfrac)
+            ((fp-notzeroo sign1 expo1 mant1); (x) + (-x) = 0
+             (fp-notzeroo sign2 expo2 mant2)
+             (fp-zeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== expo1 expo2)
-             (== frac1 frac2))
+             (== mant1 mant2))
 
-            ((fp-notzeroo sign1 expo1 frac1)
-             (fp-notzeroo sign2 expo2 frac2)
-             (fp-notzeroo rsign rexpo rfrac)
+            ((fp-notzeroo sign1 expo1 mant1)
+             (fp-notzeroo sign2 expo2 mant2)
+             (fp-notzeroo rsign rexpo rmant)
              (== sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac))
+             (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
           
             ;Approach when signs are opposite
             ;When r has the same sign as f1 (+)
@@ -339,23 +339,24 @@ Drops least significant bit in the fraction, where cap is 24 bits.
             ;When r has the same sign as f2 (-)
             ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
             ;fp-pluso (r, -f1, f2)
-            ((fp-notzeroo sign1 expo1 frac1)
-             (fp-notzeroo sign2 expo2 frac2)
-             (fp-notzeroo rsign rexpo rfrac)
+            ((fp-notzeroo sign1 expo1 mant1)
+             (fp-notzeroo sign2 expo2 mant2)
+             (fp-notzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign1 rsign)
-             (fp-swapo sign1 expo2 frac2 rsign rexpo rfrac sign1 expo1 frac1))
+             (fp-swapo sign1 expo2 mant2 rsign rexpo rmant sign1 expo1 mant1))
 
-            ((fp-notzeroo sign1 expo1 frac1)
-             (fp-notzeroo sign2 expo2 frac2)
-             (fp-notzeroo rsign rexpo rfrac)
+            ((fp-notzeroo sign1 expo1 mant1)
+             (fp-notzeroo sign2 expo2 mant2)
+             (fp-notzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))
+             (fp-swapo sign2 expo1 mant1 rsign rexpo rmant sign2 expo2 mant2)))
              
             (expo-lengtho expo1)
             (expo-lengtho expo2)
             (expo-lengtho rexpo)))
+
 
 
 #|
@@ -367,33 +368,33 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     General Floating Point Addition
 |#
 (define (fp-multo f1 f2 r)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2 rsign rexpo rfrac pre-rexpo pre-fracr template throw-out template-end ls-bits rem)
-        (fp-decompo f1 sign1 expo1 frac1)
-        (fp-decompo f2 sign2 expo2 frac2)
-        (fp-decompo r rsign rexpo rfrac)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant pre-rexpo pre-mantr template throw-out template-end ls-bits rem)
+        (fp-decompo f1 sign1 expo1 mant1)
+        (fp-decompo f2 sign2 expo2 mant2)
+        (fp-decompo r rsign rexpo rmant)
 
         (xoro sign1 sign2 rsign)
 
         (conde 
-            ((fp-zeroo rsign rexpo rfrac)    ; 0*0 = 0
-             (fp-zeroo sign1 expo1 frac1)
-             (fp-zeroo sign2 expo2 frac2))
+            ((fp-zeroo rsign rexpo rmant)    ; 0*0 = 0
+             (fp-zeroo sign1 expo1 mant1)
+             (fp-zeroo sign2 expo2 mant2))
 
-            ((fp-zeroo rsign rexpo rfrac)     ; 0 * x = 0 (x != 0)
-             (fp-zeroo sign1 expo1 frac1)
-             (fp-notzeroo sign2 expo2 frac2))
+            ((fp-zeroo rsign rexpo rmant)     ; 0 * x = 0 (x != 0)
+             (fp-zeroo sign1 expo1 mant1)
+             (fp-notzeroo sign2 expo2 mant2))
 
-            ((fp-zeroo rsign rexpo rfrac)    ; x * 0 = 0 (x != 0)
-             (fp-notzeroo sign1 expo2 frac1)
-             (fp-zeroo sign2 expo2 frac2))
+            ((fp-zeroo rsign rexpo rmant)    ; x * 0 = 0 (x != 0)
+             (fp-notzeroo sign1 expo2 mant1)
+             (fp-zeroo sign2 expo2 mant2))
             
-            ((fp-notzeroo rsign rexpo rfrac) ; x * y = z (x,y,z != 0)
+            ((fp-notzeroo rsign rexpo rmant) ; x * y = z (x,y,z != 0)
              ;(not-specialvalo f1)
              ;(not-specialvalo f2)
          
-             (drop-leastsig-bito pre-fracr rfrac ls-bits)
+             (drop-leastsig-bito pre-mantr rmant ls-bits)
 
-             (frac-lengtho template); create a template with 16 bits
+             (mantissa-lengtho template); create a template with 16 bits
              (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
 
              (appendo template-end rem ls-bits); fit the least significant bits to the template.
@@ -404,7 +405,7 @@ Drops least significant bit in the fraction, where cap is 24 bits.
                  ((=/= rem '())
                  (pluso '(1) pre-rexpo rexpo)))
             
-             (*o frac1 frac2 pre-fracr); 31 or > 31 bits.
+             (*o mant1 mant2 pre-mantr); 31 or > 31 bits.
              (bias-shifted-pluso expo1 expo2 pre-rexpo)))
 
 
@@ -422,12 +423,12 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     Relation that ensures f1 <= f2.
 |#
 (define (fp-<= f1 f2)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-        (fp-decompo f1 sign1 expo1 frac1)
-        (fp-decompo f2 sign2 expo2 frac2)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
+        (fp-decompo f1 sign1 expo1 mant1)
+        (fp-decompo f2 sign2 expo2 mant2)
         (conde ((== sign1 sign2)
                 (== expo1 expo2)
-                (<=o frac1 frac2))
+                (<=o mant1 mant2))
                ((== sign1 sign2)
                 (<o expo1 expo2))
                ((== sign1 1)
@@ -442,12 +443,12 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     Relation that ensures f1 < f2.
 |#
 (define (fp-< f1 f2)
-  (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-        (fp-decompo f1 sign1 expo1 frac1)
-        (fp-decompo f2 sign2 expo2 frac2)
+  (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
+        (fp-decompo f1 sign1 expo1 mant1)
+        (fp-decompo f2 sign2 expo2 mant2)
         (conde ((== sign1 sign2)
                 (== expo1 expo2)
-                (<o frac1 frac2))
+                (<o mant1 mant2))
                ((== sign1 sign2)
                 (<o expo1 expo2))
                ((== sign1 1)
@@ -461,9 +462,20 @@ Drops least significant bit in the fraction, where cap is 24 bits.
     Relation that ensures f1 == f2.
 |#
 (define (fp-= f1 f2)
-    (fresh (sign1 expo1 frac1 sign2 expo2 frac2)
-        (fp-decompo f1 sign1 expo1 frac1)
-        (fp-decompo f2 sign2 expo2 frac2)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
+        (fp-decompo f1 sign1 expo1 mant1)
+        (fp-decompo f2 sign2 expo2 mant2)
         (== sign1 sign2)
         (== expo1 expo2)
-        (== frac1 frac2) ))
+        (== mant1 mant2) ))
+
+#|
+(fp-negateo f negated-f)
+    f: A MKFP number
+    negated-f: A MKFP number which whas the opposite sign of f.
+|#
+(define (fp-negateo f negated-f)
+    (fresh (signf signnf expo mant)
+        (fp-decompo f signf expo mant)
+        (fp-decompo negated-f signnf expo mant)
+        (noto signf signnf)))
