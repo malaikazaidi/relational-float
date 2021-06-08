@@ -302,6 +302,7 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (fp-decompo f1 sign1 expo1 frac1)
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
+        
         (conde
             ((fp-zeroo sign1 expo1 frac1); 0 + 0 = 0
              (fp-zeroo sign2 expo2 frac2)
@@ -348,7 +349,11 @@ Drops least significant bit in the fraction, where cap is 24 bits.
              (fp-notzeroo rsign rexpo rfrac)
              (noto sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))))
+             (fp-swapo sign2 expo1 frac1 rsign rexpo rfrac sign2 expo2 frac2)))
+             
+            (expo-lengtho expo1)
+            (expo-lengtho expo2)
+            (expo-lengtho rexpo)))
 
 
 #|
@@ -365,18 +370,25 @@ Drops least significant bit in the fraction, where cap is 24 bits.
         (fp-decompo f2 sign2 expo2 frac2)
         (fp-decompo r rsign rexpo rfrac)
 
-        (conde 
-            ((fp-zeroo rsign rexpo rfrac)
-             (conde 
-                ((fp-zeroo sign1 expo1 frac1)) 
-                ((fp-zeroo sign2 expo2 frac2)))) 
-            
-            ((fp-notzeroo rsign rexpo rfrac)
-             (not-specialvalo f1)
-             (not-specialvalo f2)
-         
-             (xoro sign1 sign2 rsign)
+        (xoro sign1 sign2 rsign)
 
+        (conde 
+            ((fp-zeroo rsign rexpo rfrac)    ; 0*0 = 0
+             (fp-zeroo sign1 expo1 frac1)
+             (fp-zeroo sign2 expo2 frac2))
+
+            ((fp-zeroo rsign rexpo rfrac)     ; 0 * x = 0 (x != 0)
+             (fp-zeroo sign1 expo1 frac1)
+             (fp-notzeroo sign2 expo2 frac2))
+
+            ((fp-zeroo rsign rexpo rfrac)    ; x * 0 = 0 (x != 0)
+             (fp-notzeroo sign1 expo2 frac1)
+             (fp-zeroo sign2 expo2 frac2))
+            
+            ((fp-notzeroo rsign rexpo rfrac) ; x * y = z (x,y,z != 0)
+             ;(not-specialvalo f1)
+             ;(not-specialvalo f2)
+         
              (drop-leastsig-bito pre-fracr rfrac ls-bits)
 
              (frac-lengtho template); create a template with 16 bits
