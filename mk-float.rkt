@@ -465,9 +465,13 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
-        (== sign1 sign2)
-        (== expo1 expo2)
-        (== mant1 mant2) ))
+        (conde 
+            ((fp-zeroo sign1 expo1 mant1) (fp-zeroo sign2 expo2 mant2)) ; want to make sure -0 = +0
+            
+            ((fp-notzeroo sign1 expo1 mant1) (fp-notzeroo sign2 expo2 mant2)
+             (== sign1 sign2)
+             (== expo1 expo2)
+             (== mant1 mant2)))))
 
 #|
 (fp-negateo f negated-f)
