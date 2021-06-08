@@ -358,7 +358,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             (expo-lengtho rexpo)))
 
 
-
 #|
 (fp-multo f1 f2 r)
     f1: A MKFP number.
@@ -389,8 +388,12 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-zeroo sign2 expo2 mant2))
             
             ((fp-notzeroo rsign rexpo rmant) ; x * y = z (x,y,z != 0)
-             ;(not-specialvalo f1)
-             ;(not-specialvalo f2)
+
+             ; Still needed, maybe this wont be needed after defining what to do with infinity.
+             (not-specialvalo f1)
+             (not-specialvalo f2)
+
+             (*o mant1 mant2 pre-mantr); pre-mantr  will have either 2*precision - 1 > number of bits.
          
              (drop-leastsig-bito pre-mantr rmant ls-bits)
 
@@ -404,11 +407,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                  (== rexpo pre-rexpo))
                  ((=/= rem '())
                  (pluso '(1) pre-rexpo rexpo)))
-            
-             (*o mant1 mant2 pre-mantr); 31 or > 31 bits.
+
              (bias-shifted-pluso expo1 expo2 pre-rexpo)))
-
-
 
         (expo-lengtho expo1)
         (expo-lengtho expo2)

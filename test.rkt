@@ -103,8 +103,8 @@
            [sign-equal? (equal? sign1 sign2)]
            [sign-msg (if sign-equal? "" "SIGNS NOT EQUAL")]
 
-           [man1 (get-frac fp1)]
-           [man2 (get-frac fp2)]
+           [man1 (get-mantissa fp1)]
+           [man2 (get-mantissa fp2)]
            [man-equal? (equal? man1 man2)]
            [man-msg (if man-equal? "" "MANTISSA NOT EQUAL")]
            
