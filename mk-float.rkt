@@ -463,9 +463,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo f2 sign2 expo2 mant2)
         (conde
                ((fp-zeroo sign1 expo1 mant1)
-                (fp-zeroo sign2 expo2 mant2)
-                (== sign1 sign2))
-               ((fp-zeroo sign1 expo1 mant1)
                 (fp-notzeroo sign2 expo2 mant2)
                 (== sign2 0))
                ((fp-notzeroo sign1 expo1 mant1)
