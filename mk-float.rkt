@@ -53,15 +53,16 @@ Decomposes fp number into sign, exponent, and mantissa
              (== expo '())))))
 
 #|
-(not-specialvalo fp)
+(fp-finiteo fp)
     fp: A MKFP number.
 
 Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
-(define (not-specialvalo fp)
+(define (fp-finiteo fp)
     (fresh (sign expo mantissa)
         (fp-decompo fp sign expo mantissa)
-        (=/= expo '(1 1 1 1  1 1 1 1)))) 
+        (=/= expo '(1 1 1 1  1 1 1 1))
+        (=/= mantissa (append (make-list (- precision 1) '(1)))))) 
 
 (define (fp-zeroo sign expo mantissa)
     (fresh ()
@@ -71,7 +72,7 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
         (== expo '())
         (== mantissa (make-list precision 0))))
 
-(define (fp-notzeroo sign expo mantissa)
+(define (fp-nonzeroo sign expo mantissa)
     (fresh ()
         (conde 
             ((== sign 0))
@@ -310,24 +311,24 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-zeroo sign2 expo2 mant2)
              (fp-zeroo rsign rexpo rmant))
 
-            ((fp-notzeroo sign1 expo1 mant1); x + 0 = x
+            ((fp-nonzeroo sign1 expo1 mant1); x + 0 = x
              (fp-zeroo sign2 expo2 mant2)
              (fp-= f1 r))
 
-            ((fp-notzeroo sign2 expo2 mant2) ; 0 + y = y
+            ((fp-nonzeroo sign2 expo2 mant2) ; 0 + y = y
              (fp-zeroo sign1 expo1 mant1)
              (fp-= f2 r))
 
-            ((fp-notzeroo sign1 expo1 mant1); (x) + (-x) = 0
-             (fp-notzeroo sign2 expo2 mant2)
+            ((fp-nonzeroo sign1 expo1 mant1); (x) + (-x) = 0
+             (fp-nonzeroo sign2 expo2 mant2)
              (fp-zeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== expo1 expo2)
              (== mant1 mant2))
 
-            ((fp-notzeroo sign1 expo1 mant1)
-             (fp-notzeroo sign2 expo2 mant2)
-             (fp-notzeroo rsign rexpo rmant)
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (fp-nonzeroo rsign rexpo rmant)
              (== sign1 sign2)
              (== sign2 rsign)
              (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
@@ -339,16 +340,16 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ;When r has the same sign as f2 (-)
             ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
             ;fp-pluso (r, -f1, f2)
-            ((fp-notzeroo sign1 expo1 mant1)
-             (fp-notzeroo sign2 expo2 mant2)
-             (fp-notzeroo rsign rexpo rmant)
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (fp-nonzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign1 rsign)
              (fp-swapo sign1 expo2 mant2 rsign rexpo rmant sign1 expo1 mant1))
 
-            ((fp-notzeroo sign1 expo1 mant1)
-             (fp-notzeroo sign2 expo2 mant2)
-             (fp-notzeroo rsign rexpo rmant)
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (fp-nonzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign2 rsign)
              (fp-swapo sign2 expo1 mant1 rsign rexpo rmant sign2 expo2 mant2)))
@@ -381,17 +382,17 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
             ((fp-zeroo rsign rexpo rmant)     ; 0 * x = 0 (x != 0)
              (fp-zeroo sign1 expo1 mant1)
-             (fp-notzeroo sign2 expo2 mant2))
+             (fp-nonzeroo sign2 expo2 mant2))
 
             ((fp-zeroo rsign rexpo rmant)    ; x * 0 = 0 (x != 0)
-             (fp-notzeroo sign1 expo2 mant1)
+             (fp-nonzeroo sign1 expo2 mant1)
              (fp-zeroo sign2 expo2 mant2))
             
-            ((fp-notzeroo rsign rexpo rmant) ; x * y = z (x,y,z != 0)
+            ((fp-nonzeroo rsign rexpo rmant) ; x * y = z (x,y,z != 0)
 
              ; Still needed, maybe this wont be needed after defining what to do with infinity.
-             (not-specialvalo f1)
-             (not-specialvalo f2)
+             (fp-finiteo f1)
+             (fp-finiteo f2)
 
              (*o mant1 mant2 pre-mantr); pre-mantr  will have either 2*precision - 1 > number of bits.
          
@@ -427,27 +428,32 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (conde
-              ((fp-zeroo sign1 expo1 mant1)
-                (fp-zeroo sign2 expo2 mant2))
-              ((fp-zeroo sign1 expo1 mant1)
-               (fp-notzeroo sign2 expo2 mant2)
-               (== sign2 0))
-              ((fp-notzeroo sign1 expo1 mant1)
-               (fp-zeroo sign2 expo2 mant2)
-               (== sign1 1))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 sign2)
-                (== expo1 expo2)
-                (<=o mant1 mant2))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 sign2)
-                (<o expo1 expo2))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 1)
-                (== sign2 0)))))
+            ((fp-zeroo sign1 expo1 mant1)
+             (fp-zeroo sign2 expo2 mant2))
+            
+            ((fp-zeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign2 0))
+            
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-zeroo sign2 expo2 mant2)
+             (== sign1 1))
+            
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 sign2)
+             (== expo1 expo2)
+             (<=o mant1 mant2))
+            
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 sign2)
+             (<o expo1 expo2))
+            
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 1)
+             (== sign2 0)))))
 
 
 #|
@@ -458,29 +464,33 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     Relation that ensures f1 < f2.
 |#
 (define (fp-< f1 f2)
-  (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2)
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (conde
-               ((fp-zeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign2 0))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-zeroo sign2 expo2 mant2)
-                (== sign1 1))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 sign2)
-                (== expo1 expo2)
-                (<o mant1 mant2))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 sign2)
-                (<o expo1 expo2))
-               ((fp-notzeroo sign1 expo1 mant1)
-                (fp-notzeroo sign2 expo2 mant2)
-                (== sign1 1)
-                (== sign2 0)))))
+            ((fp-zeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign2 0))
+    
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-zeroo sign2 expo2 mant2)
+             (== sign1 1))
+    
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 sign2)
+             (== expo1 expo2)
+             (<o mant1 mant2))
+
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 sign2)
+             (<o expo1 expo2))
+     
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 1)
+             (== sign2 0)))))
 
 #|
 (fp-= f1 f2)
@@ -496,10 +506,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (conde 
             ((fp-zeroo sign1 expo1 mant1) (fp-zeroo sign2 expo2 mant2)) ; want to make sure -0 = +0
             
-            ((fp-notzeroo sign1 expo1 mant1) (fp-notzeroo sign2 expo2 mant2)
-             (== sign1 sign2)
-             (== expo1 expo2)
-             (== mant1 mant2)))))
+            ((fp-nonzeroo sign1 expo1 mant1) (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 sign2) (== expo1 expo2) (== mant1 mant2)))))
 
 #|
 (fp-negateo f negated-f)
