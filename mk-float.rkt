@@ -210,8 +210,8 @@ Checks if fp does not represent an infinity/NaN (i.e a special value).
 |#
 (define (mantissa-lengtho mantissa)
     (fresh (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
-        (== mantissa (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
-)))
+        (== mantissa
+            (take (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15) precision))))
 
 #|
 (drop-leastsig-bito mantissa rmantissa)
@@ -409,7 +409,10 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                  ((=/= rem '())
                  (pluso '(1) pre-rexpo rexpo)))
 
-             (bias-shifted-pluso expo1 expo2 pre-rexpo)))
+             
+             (bias-shifted-pluso expo1 expo2 pre-rexpo)
+             
+             ))
 
         (expo-lengtho expo1)
         (expo-lengtho expo2)
