@@ -227,15 +227,20 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
 
 #|
-(bias-shifted-pluso expo1 expo2 rexpo)
-    expo1: The exponent of a MKFP number being multiplied.
-    expo2: The exponent of a MKFP number being multiplied.
-    rexpo: The result of [(expo1 + expo2) - 127]
+(fp-overflowo expo mant rmant)
+    expo: A MKFP oleg exponent
+    mant: A MKFP mantissa
+    rmant: A MKFP mantissa
+
+    If expo is '(1 1 1 1  1 1 1 1), set the rmant to '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)
+    otherwise mant == rmant
 |#
-(define (bias-shifted-pluso expo1 expo2 rexpo)
-    (fresh (exposum) 
-        (pluso expo1 expo2 exposum)
-        (pluso BIAS rexpo exposum)))
+(define (fp-overflowo expo mant rmant)
+    (conde 
+        ((== expo '(1 1 1 1  1 1 1 1))
+         (== rmant (append (make-list (- precision 1) 0) '(1)))) 
+        ((=/= expo '(1 1 1 1  1 1 1 1))
+         (== mant rmant))))
 
 #|
 (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
@@ -253,7 +258,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     Floating-Point Addition for same signs
 |#
 (define (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
-    (fresh (shifted-mant1 mant-sum bit)
+    (fresh (shifted-mant1 mant-sum pre-rmant bit)
         (== sign1 sign2)
         (== rsign sign1); Ensure the signs are all the same before continuing
 
@@ -262,8 +267,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         
         (conde ((== bit '()) (== rexpo expo2))
                ((=/= bit '()) (pluso '(1) expo2 rexpo)))
-        (drop-leastsig-bito mant-sum rmant bit)
-        
+        (drop-leastsig-bito mant-sum pre-rmant bit)
+        (fp-overflowo rexpo pre-rmant rmant)
 
         ; oleg number addition
         (pluso shifted-mant1 mant2 mant-sum)))
@@ -368,7 +373,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     General Floating Point Addition
 |#
 (define (fp-multo f1 f2 r)
-    (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant pre-rexpo pre-mantr template throw-out template-end ls-bits rem)
+    (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant
+            expo-sum bias-diff pre-rexpo mant1mant2 pre-mantr template throw-out template-end ls-bits rem)
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (fp-decompo r rsign rexpo rmant)
@@ -387,32 +393,51 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ((fp-zeroo rsign rexpo rmant)    ; x * 0 = 0 (x != 0)
              (fp-nonzeroo sign1 expo2 mant1)
              (fp-zeroo sign2 expo2 mant2))
-            
-            ((fp-nonzeroo rsign rexpo rmant) ; x * y = z (x,y,z != 0)
 
+            ((fp-nonzeroo rsign rexpo rmant)
+             (fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2) ; x * y = z (x,y,z != 0)
+
+             (== bias-diff pre-rexpo)
              ; Still needed, maybe this wont be needed after defining what to do with infinity.
              (fp-finiteo f1)
              (fp-finiteo f2)
 
-             (*o mant1 mant2 pre-mantr); pre-mantr  will have either 2*precision - 1 > number of bits.
-         
-             (drop-leastsig-bito pre-mantr rmant ls-bits)
+             (*o mant1 mant2 mant1mant2); pre-mantr  will have either 2*precision - 1 > number of bits.
+
+             (drop-leastsig-bito mant1mant2 pre-mantr ls-bits); need to check if we still round down to 0 if final exponent = 0.
 
              (mantissa-lengtho template); create a template with 16 bits
              (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
 
              (appendo template-end rem ls-bits); fit the least significant bits to the template.
-
+             
              (conde 
-                 ((== rem '())
-                 (== rexpo pre-rexpo))
-                 ((=/= rem '())
-                 (pluso '(1) pre-rexpo rexpo)))
+                 ((=/= rem '())        ; If we add one to the exponent, just set the resultant mantissa to the mantissa with precision bits (pre-mantr)
+                  (pluso '(1) pre-rexpo rexpo)
+                  (fp-overflowo rexpo pre-mantr rmant))
+                 
+                 ((== rem '())          ; If we dont add one to the resultant exponent and the exponent is non-zero
+                  (=/= pre-rexpo '())
+                  (== rexpo pre-rexpo)
+                  (fp-overflowo rexpo pre-mantr rmant))
 
+                 ((== rem '())         ; If we dont add one to the exponent and the resultant exponent is zero, round down to zero.
+                  (== pre-rexpo '())
+                  (== rexpo pre-rexpo)
+                  (== rmant (make-list precision 0))))
              
-             (bias-shifted-pluso expo1 expo2 pre-rexpo)
-             
-             ))
+             (pluso expo1 expo2 expo-sum)
+             (pluso BIAS bias-diff expo-sum))
+
+
+            ((fp-zeroo rsign rexpo rmant) ; x * y = 0 (x,y != 0) underflow
+             (fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (=/= bias-diff '())
+             (pluso expo1 expo2 expo-sum)
+             (pluso expo-sum bias-diff BIAS))); expo1 + expo2 < 127        
+              
 
         (expo-lengtho expo1)
         (expo-lengtho expo2)

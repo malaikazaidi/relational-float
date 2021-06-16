@@ -82,6 +82,9 @@
 (define unknown-signs
     (test-suite "Tests for fp numbers that have different signs"
 
+        (test/fp-relation-r "x * 2 = y" ((fp-multo x two y) (x y))
+            (displayln 'results))
+
         (test/fp-relation-r "x * y = 1" ((fp-multo x y one) (x y))
             (displayln 'results))
 
@@ -92,9 +95,6 @@
             (displayln 'results))
 
         (test/fp-relation-r "x * y = (-6)" ((fp-multo x y n6) (x y))
-            (displayln 'results))
-            
-        (test/fp-relation-r "x * 2 = y" ((fp-multo x two y) (x y))
             (displayln 'results))))
 
 ;(displayln "Tests for same sign fp numbers")
