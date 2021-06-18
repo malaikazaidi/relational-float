@@ -18,7 +18,12 @@
     (displayln (string-append "\n" "Running: " "-3.25 < 4.6 = ?"))
     (time (test-equal? "-3.25 < 4.6 = ?" (run 1 (x) (fp-< n3.25 p4.6)) '(_.0)))
     (displayln (string-append "\n" "Running: " "-3.25 < -3.25 = ?"))
-    (time (test-equal? "4.6 < -3.25 = ?" (run 1 (x) (fp-< p4.6 n3.25)) '()))
+    (time (test-equal? "-3.25 < -3.25 = ?" (run 1 (x) (fp-< n3.25 n3.25)) '()))
+    (displayln (string-append "\n" "Running: " "-1 < -3 = ?"))
+    (time (test-equal? "-1 < -3 = ?" (run 1 (x) (fp-< negone n3)) '()))
+    (displayln (string-append "\n" "Running: " "-3 < -1.5 = ?"))
+    (time (test-equal? "-3 < -1.5 = ?" (run 1 (x) (fp-< n3 negone)) '(_.0)))
+  
     ))
   
 
@@ -42,6 +47,12 @@
     (time (test-equal? "-3.25 <= 4.6 = ?" (run 1 (x) (fp-<= n3.25 p4.6)) '(_.0)))
     (displayln (string-append "\n" "Running: " "-3.25 <= -3.25 = ?"))
     (time (test-equal? "4.6 <= -3.25 = ?" (run 1 (x) (fp-<= p4.6 n3.25)) '()))
+    (displayln (string-append "\n" "Running: " "-3.25 <= -3.25 = ?"))
+    (time (test-equal? "-3.25 <= -3.25 = ?" (run 1 (x) (fp-<= n3.25 n3.25)) '(_.0)))
+    (displayln (string-append "\n" "Running: " "-1 <= -3 = ?"))
+    (time (test-equal? "-1 <= -3 = ?" (run 1 (x) (fp-<= negone n3)) '()))
+    (displayln (string-append "\n" "Running: " "-3 <= -1.5 = ?"))
+    (time (test-equal? "-3 <= -1.5 = ?" (run 1 (x) (fp-<= n3 negone)) '(_.0)))
     ))
 
 (define equal-to

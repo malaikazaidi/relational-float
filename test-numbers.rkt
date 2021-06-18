@@ -99,3 +99,4 @@
 (define n0.05 (build-truncated-float -0.05))
 (define n1.05 (build-truncated-float -1.05))
 (define p40 (build-truncated-float 40))
+(define n3 (build-truncated-float -3))

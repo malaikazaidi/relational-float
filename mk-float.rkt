@@ -530,29 +530,53 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (conde
+            ;f1=0 and f2>0
             ((fp-zeroo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2)
              (== sign2 0))
-    
+            
+            ;f1<0 and f2=0
             ((fp-nonzeroo sign1 expo1 mant1)
              (fp-zeroo sign2 expo2 mant2)
              (== sign1 1))
-    
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 sign2)
-             (== expo1 expo2)
-             (<o mant1 mant2))
 
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 sign2)
-             (<o expo1 expo2))
-     
+            ;f1<0 and f2>0
             ((fp-nonzeroo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2)
              (== sign1 1)
-             (== sign2 0)))))
+             (== sign2 0))
+
+            ;f1,f2 >0 and expo of f2 is larger
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 0)
+             (== sign2 0)
+             (<o expo1 expo2))
+
+            ;f1,f2 <0 and expo of f2 is smaller
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 1)
+             (== sign2 1)
+             (<o expo2 expo1))
+
+            ;f1,f2 >0 and expo are equal and mantissa of f2 is larger
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 0)
+             (== sign2 0)
+             (== expo1 expo2)
+             (<o mant1 mant2))
+
+            ;f1,f2 <0 and expo are equal and mantissa of f2 is smaller
+            ((fp-nonzeroo sign1 expo1 mant1)
+             (fp-nonzeroo sign2 expo2 mant2)
+             (== sign1 1)
+             (== sign2 1)
+             (== expo1 expo2)
+             (<o mant2 mant1))
+
+            )))
 
 #|
 (fp-= f1 f2)
