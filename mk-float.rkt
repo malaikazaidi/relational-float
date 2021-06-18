@@ -429,7 +429,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 |#
 (define (fp-multo f1 f2 r)
     (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant
-            expo-sum bias-diff pre-rexpo mant1mant2 pre-mantr template throw-out template-end ls-bits rem)
+            expo-sum pre-rexpo mant1mant2 pre-mantr template throw-out template-end ls-bits rem)
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (fp-decompo r rsign rexpo rmant)
@@ -457,8 +457,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
 
-             (== bias-diff pre-rexpo)
-
              (*o mant1 mant2 mant1mant2); pre-mantr  will have either 2*precision - 1 > number of bits.
 
              (drop-leastsig-bito mant1mant2 pre-mantr ls-bits); need to check if we still round down to 0 if final exponent = 0.
@@ -484,15 +482,16 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                   (== rmant (make-list precision 0))))
              
              (pluso expo1 expo2 expo-sum)
-             (pluso BIAS bias-diff expo-sum))
+             (pluso BIAS pre-rexpo expo-sum))
 
             ; x * y = 0 (x, y \in R: x,y != 0, +/- \inf)  underflow
             ((fp-zeroo rsign rexpo rmant) 
              (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (=/= bias-diff '())
-             (pluso expo1 expo2 expo-sum)
-             (pluso expo-sum bias-diff BIAS)) ; expo1 + expo2 < 127
+             (fresh (bias-diff)
+                (=/= bias-diff '())
+                (pluso expo1 expo2 expo-sum)
+                (pluso expo-sum bias-diff BIAS))) ; expo1 + expo2 < 127
             
             ; (s1 \inf) * (s2 \inf) = ((s1 ^ s2) \inf)
             ((fp-infiniteo rsign rexpo rmant)
