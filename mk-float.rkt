@@ -295,11 +295,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
     Floating-Point Addition for same signs
 |#
-(define (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
+(define (fp-samesignaddero expo1 mant1 expo2 mant2 expo-diff rexpo rmant)
     (fresh (shifted-mant1 mant-sum pre-rmant bit)
-        (== sign1 sign2)
-        (== rsign sign1); Ensure the signs are all the same before continuing
-
         ;shift the mantissa of the SMALLER exponent
         (mantissa-shifto mant1 expo-diff shifted-mant1)
         
@@ -326,14 +323,14 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     Calls fp-samesignaddero so that the number out of f1 and f2 with the
     smaller exponent is entered first.
 |#
-(define (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+(define (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant)
     (fresh (expo-diff)  
         (conde
             ((pluso expo-diff expo1 expo2)
-             (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant))
+             (fp-samesignaddero expo1 mant1 expo2 mant2 expo-diff rexpo rmant))
             ((=/= expo1 expo2)
              (pluso expo-diff expo2 expo1)
-             (fp-samesignaddero sign2 expo2 mant2 sign1 expo1 mant1 expo-diff rsign rexpo rmant)))))
+             (fp-samesignaddero expo2 mant2 expo1 mant1 expo-diff rexpo rmant)))))
 
 #|
 (fp-pluso f1 f2 r)
@@ -379,7 +376,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-nonzeroo rsign rexpo rmant)
              (== sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
+             (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant))
           
             ;Approach when signs are opposite
             ;When r has the same sign as f1 (+)
@@ -393,14 +390,14 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-nonzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign1 rsign)
-             (fp-swapo sign1 expo2 mant2 rsign rexpo rmant sign1 expo1 mant1))
+             (fp-swapo expo2 mant2 rexpo rmant expo1 mant1))
 
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
              (noto sign1 sign2)
              (== sign2 rsign)
-             (fp-swapo sign2 expo1 mant1 rsign rexpo rmant sign2 expo2 mant2))
+             (fp-swapo expo1 mant1 rexpo rmant expo2 mant2))
              
             ((== sign1 sign2)  (== rsign sign2);  (+/- \inf) + (+/- \inf) = (+/- \inf)
              (fp-infiniteo sign1 expo1 mant1)
@@ -574,9 +571,10 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (== sign1 1)
              (== sign2 1)
              (== expo1 expo2)
-             (<o mant2 mant1))
+             (<o mant2 mant1)))
 
-            )))
+        (expo-lengtho expo1)
+        (expo-lengtho expo2)))
 
 #|
 (fp-= f1 f2)
@@ -593,7 +591,9 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ((fp-zeroo sign1 expo1 mant1) (fp-zeroo sign2 expo2 mant2)) ; want to make sure -0 = +0
             
             ((fp-nonzeroo sign1 expo1 mant1) (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 sign2) (== expo1 expo2) (== mant1 mant2)))))
+             (== sign1 sign2) (== expo1 expo2) (== mant1 mant2)))
+        (expo-lengtho expo1)
+        (expo-lengtho expo2)))
 
 #|
 (fp-<= f1 f2)
