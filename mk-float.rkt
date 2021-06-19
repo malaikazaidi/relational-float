@@ -251,6 +251,11 @@ a positive or negative quantity.
         (== mantissa
             (take (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15) precision))))
 
+(define (mantissa-length-minus1o mantissa)
+    (fresh (b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15)
+        (== mantissa
+            (take (list b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15) (- precision 1)))))
+
 #|
 (drop-leastsig-bito mantissa rmantissa)
     mantissa: The mantissa being created that may have more than 24 bits.
@@ -279,7 +284,22 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
          (== rmant (append (make-list (- precision 1) 0) '(1)))) 
         ((=/= expo '(1 1 1 1  1 1 1 1))
          (== mant rmant))))
+#|
+(fp-underflowo expo mant rmant)
+    expo: A MKFP oleg exponent
+    mant: A MKFP mantissa
+    rmant: A MKFP mantissa
 
+    If expo is '(), set the rmant to '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0)
+    otherwise mant == rmant
+|#
+(define (fp-underflowo expo mant rmant)
+    (conde
+        ((== expo '())
+         (== rmant (make-list precision 0)))
+        
+        ((=/= expo '())
+         (== mant rmant))))
 #|
 (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
     sign1: The sign of the MKFP number with the smaller exponent
@@ -333,6 +353,58 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-samesignaddero expo2 mant2 expo1 mant1 expo-diff rexpo rmant)))))
 
 #|
+(fp-specialpluso sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+    sign1: The sign of the MKFP number
+    expo1: The exponent of the MKFP number
+    mant1: The mantissa of the MKFP number
+    sign2: The sign of the MKFP number
+    expo2: The exponent of the MKFP number 
+    mant2: The mantissa of the MKFP number
+    rsign: The resulting sign of the addition f1 + f2
+    rexpo: The resulting exponent of the addition f1 + f2
+    rmant: The resulting mantissa of the addition f1 + f2
+
+    Performs the special case additions. i.e. addition with 0 and infinity.
+|#
+(define (fp-specialpluso sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+    (conde
+        ; 0 + 0 = 0
+        ((fp-zeroo sign1 expo1 mant1)
+         (fp-zeroo sign2 expo2 mant2)
+         (fp-zeroo rsign rexpo rmant))
+
+        ; x + 0 = x (x \in R)
+        ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
+         (fp-zeroo sign2 expo2 mant2)
+         (== rsign sign1) (== rexpo expo1) (== rmant mant1))
+
+        ; 0 + y = y (y \in R)
+        ((fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
+         (fp-zeroo sign1 expo1 mant1)
+         (== rsign sign2) (== rexpo expo2) (== rmant mant2))
+
+        ((noto sign1 sign2) ; (x) + (-x) = 0 (x \in R)
+         (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
+         (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
+         (== expo1 expo2) (== mant1 mant2)
+         (fp-zeroo rsign rexpo rmant))
+
+        ((== sign1 sign2)  (== rsign sign2);  (+/- \inf) + (+/- \inf) = (+/- \inf)
+         (fp-infiniteo sign1 expo1 mant1)
+         (fp-infiniteo sign2 expo2 mant2)
+         (fp-infiniteo rsign rexpo rmant))
+
+        ((== sign2 rsign);   c + (+/- \inf) = (+/- \inf) (c \in R)
+         (fp-finiteo sign1 expo1 mant1)
+         (fp-infiniteo sign2 expo2 mant2)
+         (fp-infiniteo rsign rexpo rmant))
+
+        ((== sign1 rsign);   (+/- \inf) + c = (+/- \inf) (c \in R)
+         (fp-infiniteo sign1 expo1 mant1)
+         (fp-finiteo sign2 expo2 mant2)
+         (fp-infiniteo rsign rexpo rmant))))
+
+#|
 (fp-pluso f1 f2 r)
     f1: A MKFP number.
     f2: A MKFP number.
@@ -347,35 +419,12 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo r rsign rexpo rmant)
         
         (conde
-            ((fp-zeroo sign1 expo1 mant1); 0 + 0 = 0
-             (fp-zeroo sign2 expo2 mant2)
-             (fp-zeroo rsign rexpo rmant))
-
-            ; x + 0 = x (x \in R)
-            ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
-             (fp-zeroo sign2 expo2 mant2)
-             (fp-= f1 r))
-
-            ; 0 + y = y (y \in R)
-            ((fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (fp-zeroo sign1 expo1 mant1)
-             (fp-= f2 r))
-
-            ((noto sign1 sign2) ; (x) + (-x) = 0 (x \in R)
-             (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             
-             (fp-zeroo rsign rexpo rmant)
-             (== expo1 expo2)
-             (== mant1 mant2))
-
+            ((fp-specialpluso sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
             ;(+/- x) + (+/- y) = (+/- z) (x, y \in R) (z \in R \cup {+/- \inf})
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             
              (fp-nonzeroo rsign rexpo rmant)
-             (== sign1 sign2)
-             (== sign2 rsign)
+             (== sign1 sign2) (== sign2 rsign)
              (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant))
           
             ;Approach when signs are opposite
@@ -388,36 +437,65 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
-             (noto sign1 sign2)
-             (== sign1 rsign)
+             (noto sign1 sign2) (== sign1 rsign)
              (fp-swapo expo2 mant2 rexpo rmant expo1 mant1))
 
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
-             (noto sign1 sign2)
-             (== sign2 rsign)
-             (fp-swapo expo1 mant1 rexpo rmant expo2 mant2))
-             
-            ((== sign1 sign2)  (== rsign sign2);  (+/- \inf) + (+/- \inf) = (+/- \inf)
-             (fp-infiniteo sign1 expo1 mant1)
-             (fp-infiniteo sign2 expo2 mant2)
-             (fp-infiniteo rsign rexpo rmant))
-
-            ((== sign2 rsign);   c + (+/- \inf) = (+/- \inf) (c \in R)
-             (fp-finiteo sign1 expo1 mant1)
-             (fp-infiniteo sign2 expo2 mant2)
-             (fp-infiniteo rsign rexpo rmant))
-
-            ((== sign1 rsign);   (+/- \inf) + c = (+/- \inf) (c \in R)
-             (fp-infiniteo sign1 expo1 mant1)
-             (fp-finiteo sign2 expo2 mant2)
-             (fp-infiniteo rsign rexpo rmant)))
+             (noto sign1 sign2) (== sign2 rsign)
+             (fp-swapo expo1 mant1 rexpo rmant expo2 mant2)))
              
             (expo-lengtho expo1)
             (expo-lengtho expo2)
             (expo-lengtho rexpo)))
 
+
+#|
+(fp-specialmulto sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+    sign1: The sign of the MKFP number
+    expo1: The exponent of the MKFP number
+    mant1: The mantissa of the MKFP number
+    sign2: The sign of the MKFP number
+    expo2: The exponent of the MKFP number 
+    mant2: The mantissa of the MKFP number
+    rsign: The resulting sign of the multiplication f1 * f2
+    rexpo: The resulting exponent of the multiplication f1 * f2
+    rmant: The resulting mantissa of the multiplication f1 * f2
+
+    Performs the special case multiplications. i.e. multiplication with 0 and infinity.
+|#
+(define (fp-specialmulto sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
+    (conde 
+        ; 0*0 = 0
+        ((fp-zeroo rsign rexpo rmant)    
+         (fp-zeroo sign1 expo1 mant1)
+         (fp-zeroo sign2 expo2 mant2))
+
+        ; 0 * y = 0  (y \in R: y != 0, +/- \inf) 
+        ((fp-zeroo rsign rexpo rmant)     
+         (fp-zeroo sign1 expo1 mant1)
+         (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))
+
+        ; x * 0 = 0 (x \in R: x != 0, +/- \inf) 
+        ((fp-zeroo rsign rexpo rmant)    
+         (fp-nonzeroo sign1 expo2 mant1) (fp-finiteo sign1 expo1 mant1)
+         (fp-zeroo sign2 expo2 mant2))
+
+        ; (s1 \inf) * (s2 \inf) = ((s1 ^ s2) \inf)
+        ((fp-infiniteo rsign rexpo rmant)
+         (fp-infiniteo sign1 expo1 mant1)
+         (fp-infiniteo sign2 expo2 mant2))
+
+        ; (s1 \inf) * (s2 y) = ((s1 ^ s2) \inf) (y \in R: y != 0, +/- \inf) 
+        ((fp-infiniteo rsign rexpo rmant)
+         (fp-infiniteo sign1 expo1 mant1)
+         (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))
+
+        ; (s1 x) * (s2 \inf) = ((s1 ^ s2) \inf) (x \in R: x != 0, +/- \inf) 
+        ((fp-infiniteo rsign rexpo rmant)
+         (fp-infiniteo sign1 expo1 mant1)
+         (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))))
 
 #|
 (fp-multo f1 f2 r)
@@ -429,89 +507,52 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 |#
 (define (fp-multo f1 f2 r)
     (fresh (sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant
-            expo-sum pre-rexpo mant1mant2 pre-mantr template throw-out template-end ls-bits rem)
+            pre-rexpo mant1mant2 pre-mantr ls-bits)
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
-        (fp-decompo r rsign rexpo rmant)
+        (fp-decompo r  rsign rexpo rmant)
 
         (xoro sign1 sign2 rsign)
 
         (conde 
-            ; 0*0 = 0
-            ((fp-zeroo rsign rexpo rmant)    
-             (fp-zeroo sign1 expo1 mant1)
-             (fp-zeroo sign2 expo2 mant2))
-
-            ; 0 * y = 0  (y \in R: y != 0, +/- \inf) 
-            ((fp-zeroo rsign rexpo rmant)     
-             (fp-zeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))
-
-            ; x * 0 = 0 (x \in R: x != 0, +/- \inf) 
-            ((fp-zeroo rsign rexpo rmant)    
-             (fp-nonzeroo sign1 expo2 mant1) (fp-finiteo sign1 expo1 mant1)
-             (fp-zeroo sign2 expo2 mant2))
+            ((fp-specialmulto sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
 
             ; x * y = z (x,y,z != 0) (x, y \in R: x,y != 0, +/- \inf) 
-            ((fp-nonzeroo rsign rexpo rmant)
-             (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
+            ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-
+             (fp-nonzeroo rsign rexpo rmant)
              (*o mant1 mant2 mant1mant2); pre-mantr  will have either 2*precision - 1 > number of bits.
-
              (drop-leastsig-bito mant1mant2 pre-mantr ls-bits); need to check if we still round down to 0 if final exponent = 0.
-
-             (mantissa-lengtho template); create a template with 16 bits
-             (== template (cons throw-out template-end)); throw out 1 bit to get a 15 bit template
-
-             (appendo template-end rem ls-bits); fit the least significant bits to the template.
              
              (conde 
-                 ((=/= rem '())        ; If we add one to the exponent, just set the resultant mantissa to the mantissa with precision bits (pre-mantr)
-                  (pluso '(1) pre-rexpo rexpo)
-                  (fp-overflowo rexpo pre-mantr rmant))
-                 
-                 ((== rem '())          ; If we dont add one to the resultant exponent and the exponent is non-zero
-                  (=/= pre-rexpo '())
-                  (== rexpo pre-rexpo)
-                  (fp-overflowo rexpo pre-mantr rmant))
+                ((mantissa-length-minus1o ls-bits)
+                 (== pre-rexpo rexpo))
 
-                 ((== rem '())         ; If we dont add one to the exponent and the resultant exponent is zero, round down to zero.
-                  (== pre-rexpo '())
-                  (== rexpo pre-rexpo)
-                  (== rmant (make-list precision 0))))
+                ((mantissa-lengtho ls-bits)  ; 16 bits
+                 (pluso '(1) pre-rexpo rexpo))) ; add one to exponent
              
-             (pluso expo1 expo2 expo-sum)
-             (pluso BIAS pre-rexpo expo-sum))
+                (fp-underflowo rexpo pre-mantr rmant)
+                (fp-overflowo rexpo pre-mantr rmant)
+
+                (fresh (expo-sum) 
+                    (pluso expo1 expo2 expo-sum)
+                    (pluso BIAS pre-rexpo expo-sum)))
 
             ; x * y = 0 (x, y \in R: x,y != 0, +/- \inf)  underflow
-            ((fp-zeroo rsign rexpo rmant) 
-             (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
+            ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (fresh (bias-diff)
+             (fp-zeroo rsign rexpo rmant) 
+             (fresh (bias-diff expo-sum)
                 (=/= bias-diff '())
                 (pluso expo1 expo2 expo-sum)
-                (pluso expo-sum bias-diff BIAS))) ; expo1 + expo2 < 127
-            
-            ; (s1 \inf) * (s2 \inf) = ((s1 ^ s2) \inf)
-            ((fp-infiniteo rsign rexpo rmant)
-             (fp-infiniteo sign1 expo1 mant1)
-             (fp-infiniteo sign2 expo2 mant2))
-
-            ; (s1 \inf) * (s2 y) = ((s1 ^ s2) \inf) (y \in R: y != 0, +/- \inf) 
-            ((fp-infiniteo rsign rexpo rmant)
-             (fp-infiniteo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))
-
-            ; (s1 x) * (s2 \inf) = ((s1 ^ s2) \inf) (x \in R: x != 0, +/- \inf) 
-            ((fp-infiniteo rsign rexpo rmant)
-             (fp-infiniteo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)))        
-              
-
+                (pluso expo-sum bias-diff BIAS)))) ; expo1 + expo2 < 127))
+        
         (expo-lengtho expo1)
         (expo-lengtho expo2)
         (expo-lengtho rexpo)))
+
+            
+            
 
 ; TODO: add constraint for -zero and +zero to be equal to one another.
 #|
