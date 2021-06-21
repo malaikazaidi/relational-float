@@ -1,8 +1,11 @@
 #lang racket
 (require rackunit rackunit/text-ui "mk-float.rkt" "test-numbers.rkt" "test.rkt")
+(require "mk.rkt")
+(require "mk-float.rkt")
 
 (define equal-signs-test
     (test-suite "Tests for fp numbers that have equal signs" ;(test/fp-relation-r <test-name> <expected> : <relation-expr> (<lvar> <lvars> ...))
+
 
         (test/fp-relation-r "1 * 1 = ?" ((fp-multo one one x) (x))
             (check-results-fp-equal? 'results one))
@@ -81,6 +84,13 @@
 
 (define unknown-signs
     (test-suite "Tests for fp numbers that have different signs"
+        (test/fp-relation-r "1 * 0 = ?" ((fp-multo one zero x) (x))
+            (check-results-fp-equal? 'results zero))
+        (test/fp-relation-r "0 * 1 = ?" ((fp-multo zero one x) (x))
+            (check-results-fp-equal? 'results zero))
+        (test/fp-relation-r "x * 1 = 0" ((fp-multo x one zero) (x))
+            (check-results-fp-equal? 'results zero))
+
 
         (test/fp-relation-r "x * 2 = y" ((fp-multo x two y) (x y))
             (displayln 'results))
@@ -97,9 +107,11 @@
         (test/fp-relation-r "x * y = (-6)" ((fp-multo x y n6) (x y))
             (displayln 'results))))
 
-;(displayln "Tests for same sign fp numbers")
+(displayln "Tests for same sign fp numbers")
 ;(run-tests equal-signs-test)
-;(displayln "Tests for different sign fp numbers")
+(displayln "Tests for different sign fp numbers")
 ;(run-tests nonequal-signs-test)
 
 (run-tests unknown-signs)
+;(displayln epsilon)
+;(displayln (run 1 (x) (fp-multo epsilon epsilon x)))

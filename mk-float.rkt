@@ -470,7 +470,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
         ; x * 0 = 0 (x \in R: x != 0, +/- \inf) 
         ((fp-zeroo rsign rexpo rmant)    
-         (fp-nonzeroo sign1 expo2 mant1) (fp-finiteo sign1 expo1 mant1)
+         (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
          (fp-zeroo sign2 expo2 mant2))
 
         ; (s1 \inf) * (s2 \inf) = ((s1 ^ s2) \inf)
@@ -506,36 +506,39 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (xoro sign1 sign2 rsign)
 
         (conde 
+            ((fp-specialmulto sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
+
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (conde 
-                ; x * y = z (x,y,z != 0) (x, y \in R: x,y != 0, +/- \inf) 
-                ((fp-nonzeroo rsign rexpo rmant)
-                 (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
-                 
-                    (fp-flowo rexpo pre-mantr rmant)
-                    (*o mant1 mant2 mant1mant2); pre-mantr  will have either 2*precision - 1 > number of bits.
+             (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
+                ; check underflow
+                (fp-flowo rexpo pre-mantr rmant)
 
-                
-                    (drop-leastsig-bito mant1mant2 pre-mantr ls-bits); need to check if we still round down to 0 if final exponent = 0.  
-                    (conde
-                       ((mantissa-lengtho ls-bits)  ; 16 bits
-                        (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
-                        ((mantissa-length-minus1o ls-bits) ; 15 bits
-                         (== pre-rexpo rexpo)))
+                ; mantissa *
+                (*o mant1 mant2 mant1mant2)
 
+                ; round by chopping 
+                (drop-leastsig-bito mant1mant2 pre-mantr ls-bits)
 
-                    (pluso expo1 expo2 expo-sum) (pluso BIAS pre-rexpo expo-sum)))
-                
-                ; x * y = 0 (x, y \in R: x,y != 0, +/- \inf)  underflow
-                ((fp-zeroo rsign rexpo rmant)
-              
-                 (fresh (bias-diff expo-sum)
-                    (=/= bias-diff '())
-                    (pluso expo1 expo2 expo-sum)
-                    (pluso expo-sum bias-diff BIAS))))) ; expo1 + expo2 < 127
+                ; check if we need to +1 to the exponent
+                (conde
+                   ((mantissa-lengtho ls-bits)  ; 16 bits
+                    (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
+                   ((mantissa-length-minus1o ls-bits) ; 15 bits
+                    (== pre-rexpo rexpo)))
 
-            ((fp-specialmulto sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))) 
+                ; add the exponent
+                (pluso expo1 expo2 expo-sum)
+
+                (conde
+                    ; determine the exponent of a non-zero result
+                    ((pluso BIAS pre-rexpo expo-sum)
+                     (fp-nonzeroo rsign rexpo rmant))
+                    ; zero result
+                    ((fp-zeroo rsign rexpo rmant)
+                     (<o expo-sum BIAS)))
+              ))
+            ) 
         
         (expo-lengtho expo1)
         (expo-lengtho expo2)
