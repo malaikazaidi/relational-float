@@ -273,22 +273,19 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
 
 #|
-(fp-flowo expo mant rmant)
+(fp-overflowo expo mant rmant)
     expo: A MKFP oleg exponent
     mant: A MKFP mantissa
     rmant: A MKFP mantissa
 
     If expo is '(1 1 1 1  1 1 1 1), equate rmant to '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)
-    If expo is '(), equate rmant to '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0)
     otherwise mant == rmant
 |#
-(define (fp-flowo expo mant rmant)
+(define (fp-overflowo expo mant rmant)
     (conde 
         ((=/= expo FULL-EXP) (=/= expo '()) (== mant rmant))
         ((== expo FULL-EXP)
-         (== rmant UNIT-MANTISSA)) 
-        ((== expo '())
-         (== rmant ZERO-MANTISSA))))
+         (== rmant UNIT-MANTISSA))))
 
 #|
 (fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
@@ -314,7 +311,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                ((=/= bit '()) (pluso '(1) expo2 rexpo)))
 
         (drop-leastsig-bito mant-sum pre-rmant bit)
-        (fp-flowo rexpo pre-rmant rmant)
+        (fp-overflowo rexpo pre-rmant rmant)
 
         ; oleg number addition
         (pluso shifted-mant1 mant2 mant-sum)))
@@ -511,10 +508,11 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
+             (fp-nonzeroo rsign rexpo rmant)
              (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
-                ; check underflow
+                ; check overflow
                     
-                (fp-flowo rexpo pre-mantr rmant)
+                (fp-overflowo rexpo pre-mantr rmant)
 
                 ; mantissa *
                 ; (2) Compute the mantissa using Oleg number *o
@@ -535,15 +533,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                 ; add the exponent
                 ; (4) Compute sum of the exponents, to compute rexpo
                 (pluso expo1 expo2 expo-sum)
-
-                ; (6) Handle underflow
-                (conde
-                    ; determine the exponent of a non-zero result
-                    ((pluso BIAS pre-rexpo expo-sum)
-                     (fp-nonzeroo rsign rexpo rmant))
-                    ; zero result
-                    ((fp-zeroo rsign rexpo rmant)
-                     (<o expo-sum BIAS)))))) 
+                (pluso BIAS pre-rexpo expo-sum)))) 
         
         (expo-lengtho expo1)
         (expo-lengtho expo2)
