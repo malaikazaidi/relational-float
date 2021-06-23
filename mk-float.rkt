@@ -503,6 +503,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo f2 sign2 expo2 mant2)
         (fp-decompo r  rsign rexpo rmant)
 
+        ;(1) relate the signs
         (xoro sign1 sign2 rsign)
 
         (conde 
@@ -512,15 +513,19 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
                 ; check underflow
+                    
                 (fp-flowo rexpo pre-mantr rmant)
 
                 ; mantissa *
+                ; (2) Compute the mantissa using Oleg number *o
                 (*o mant1 mant2 mant1mant2)
 
-                ; round by chopping 
+                ; round by chopping
+                ; (3) Keep only p digits of the mantissa
                 (drop-leastsig-bito mant1mant2 pre-mantr ls-bits)
 
-                ; check if we need to +1 to the exponent
+                ; (5) check if we need to +1 to the exponent
+                
                 (conde
                    ((mantissa-lengtho ls-bits)  ; 16 bits
                     (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
@@ -528,8 +533,10 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                     (== pre-rexpo rexpo)))
 
                 ; add the exponent
+                ; (4) Compute sum of the exponents, to compute rexpo
                 (pluso expo1 expo2 expo-sum)
 
+                ; (6) Handle underflow
                 (conde
                     ; determine the exponent of a non-zero result
                     ((pluso BIAS pre-rexpo expo-sum)
