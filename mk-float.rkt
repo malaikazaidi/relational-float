@@ -536,9 +536,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                      (fp-nonzeroo rsign rexpo rmant))
                     ; zero result
                     ((fp-zeroo rsign rexpo rmant)
-                     (<o expo-sum BIAS)))
-              ))
-            ) 
+                     (<o expo-sum BIAS)))))) 
         
         (expo-lengtho expo1)
         (expo-lengtho expo2)
