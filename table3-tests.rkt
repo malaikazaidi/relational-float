@@ -22,7 +22,7 @@
     (test-suite "Tests for Table 3"
         (test/fp-relation-r "x + x = 10" ((fp-pluso x x ten) (x))
             (displayln 'results))
-        (test/fp-relation-r "x + (x*x) = 1" ((quadratic-form1 x) (x))
+        #;(test/fp-relation-r "x + (x*x) = 1" ((quadratic-form1 x) (x))
             (displayln 'results))
         (test/fp-relation-r "x * (x + 1) = 1" ((quadratic-form2 x) (x))
             (displayln 'results))))

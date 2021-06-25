@@ -6,7 +6,7 @@
 (provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision)
 
 (define BIAS (build-num 127))
-(define precision 7)
+(define precision 16)
 (define UNIT-MANTISSA (append (make-list (- precision 1) 0) '(1)))
 (define ZERO-MANTISSA (make-list precision 0))
 (define FULL-EXP '(1 1 1 1  1 1 1 1))
@@ -412,27 +412,23 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
-             (== sign1 sign2) (== sign2 rsign)
-             (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant))
-          
-            ;Approach when signs are opposite
-            ;When r has the same sign as f1 (+)
-            ;f1+(-f2) = r -> f1 = r + f2
-            ;fp-pluso (-f2, r, f1)
-            ;When r has the same sign as f2 (-)
-            ;f1 + (-f2) = -r -> -f2 = -r + (-f1)
-            ;fp-pluso (r, -f1, f2)
-            ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (fp-nonzeroo rsign rexpo rmant)
-             (noto sign1 sign2) (== sign1 rsign)
-             (fp-swapo expo2 mant2 rexpo rmant expo1 mant1))
 
-            ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
-             (fp-nonzeroo rsign rexpo rmant)
-             (noto sign1 sign2) (== sign2 rsign)
-             (fp-swapo expo1 mant1 rexpo rmant expo2 mant2)))
+             (conde 
+                ((== sign1 sign2) (== sign2 rsign)
+                 (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant)) 
+                
+                ; Approach when signs are opposite
+                ; When r has the same sign as f1 (+)
+                ; f1+(-f2) = r -> f1 = r + f2
+                ; fp-pluso (-f2, r, f1)
+                ; When r has the same sign as f2 (-)
+                ; f1 + (-f2) = -r -> -f2 = -r + (-f1)
+                ; fp-pluso (r, -f1, f2)
+                ((noto sign1 sign2) (== sign1 rsign)
+                 (fp-swapo expo2 mant2 rexpo rmant expo1 mant1)) 
+                
+                ((noto sign1 sign2) (== sign2 rsign)
+                 (fp-swapo expo1 mant1 rexpo rmant expo2 mant2)))))
              
         (expo-lengtho expo1)
         (expo-lengtho expo2)

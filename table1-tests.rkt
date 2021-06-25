@@ -7,7 +7,7 @@
 (define table1-test-suite
     (test-suite "Table 1 tests"
 
-        (test-suite "One variable"
+        #;(test-suite "One variable"
 
 
             (test/fp-relation-r "3 + 0 = ?" ((fp-pluso three zero x) (x))
@@ -78,13 +78,13 @@
     (test-suite "Two variables" 
 
         (test/fp-relation-r "? + pi = ?" ((fp-pluso x pi y) (x y)))
-        (test/fp-relation-r "? + pi = ?" 10 10 ((fp-pluso x pi y) (x y)))
+        (test/fp-relation-r "? + pi = ?" 15 15 ((fp-pluso x pi y) (x y)))
         
         (test/fp-relation-r "pi + ? = ?" ((fp-pluso pi x y) (x y)))
-        (test/fp-relation-r "pi + ? = ?" 10 10 ((fp-pluso pi x y) (x y)))
+        (test/fp-relation-r "pi + ? = ?" 15 15 ((fp-pluso pi x y) (x y)))
 
         (test/fp-relation-r "? + ? = pi" ((fp-pluso x y pi) (x y)))
-        (test/fp-relation-r "? + ? = pi" 10 10 ((fp-pluso x y pi) (x y))))
+        (test/fp-relation-r "? + ? = pi" 15 15 ((fp-pluso x y pi) (x y))))
         
     #;(test-suite "Three variables" 
 

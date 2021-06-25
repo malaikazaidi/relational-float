@@ -89,7 +89,7 @@
 (define pi (build-truncated-float 3.14))
 (define 100pi (build-truncated-float 314))
 (define n100pi (build-truncated-float -314))
-
+(define p1.0001 (build-truncated-float 1.0001))
 (define p4.14 `(0 ,(build-num 129) ( 0 1 0 1  1 1 1 0  0 0 1 0  0 0 0 1)))
 (define p414.15 `(0 ,(build-num 135) ( 0 0 0 0  0 0 0 0  1 1 1 1  0 0 1 1)))
 (define p214 (build-truncated-float 214))
