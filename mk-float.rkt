@@ -6,7 +6,7 @@
 (provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision)
 
 (define BIAS (build-num 127))
-(define precision 16)
+(define precision 7)
 (define UNIT-MANTISSA (append (make-list (- precision 1) 0) '(1)))
 (define ZERO-MANTISSA (make-list precision 0))
 (define FULL-EXP '(1 1 1 1  1 1 1 1))
@@ -77,7 +77,7 @@ do not represent an infinity/NaN (i.e a special value).
     mantissa: The mantissa of a MKFP number.
 
 Checks if the floating point number given by the arguments -- sign, expo, and mantissa --
-represent an infinity/NaN (i.e a special value).
+represent an infinity.
 |#
 (define (fp-infiniteo sign expo mantissa)
     (fresh ()
@@ -482,8 +482,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
 
         ; (s1 x) * (s2 \inf) = ((s1 ^ s2) \inf) (x \in R: x != 0, +/- \inf) 
         ((fp-infiniteo rsign rexpo rmant)
-         (fp-infiniteo sign1 expo1 mant1)
-         (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2))))
+         (fp-infiniteo sign2 expo2 mant2)
+         (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1))))
 
 #|
 (fp-multo f1 f2 r)
@@ -511,7 +511,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
              (fp-nonzeroo rsign rexpo rmant)
              (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
                 ; check overflow
-                    
                 (fp-overflowo rexpo pre-mantr rmant)
 
                 ; mantissa *

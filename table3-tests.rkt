@@ -3,25 +3,29 @@
 (require rackunit rackunit/text-ui "mk-float.rkt" "test-numbers.rkt" "test.rkt" "mk.rkt")
 (provide precision)
 
-(define precision 16)
+(define ten (list (first p10) (second p10) (take-right (third p10) precision)))
+(define p1 (list (first one) (second one) (take-right (third one) precision)))
+
+
+(define (quadratic-form1 x) 
+    (fresh (y)
+        (fp-pluso x y p1)(fp-multo x x y)
+        ))
+
+(define (quadratic-form2 x)
+    (fresh (y)
+        (fp-pluso p1 x y) (fp-multo x y p1)))
+
+(displayln (string-append "Precision test p =" (number->string precision)))
+
 (define table3-test-suite
     (test-suite "Tests for Table 3"
-        (test/fp-relation-r "x + x = 10" ((fp-pluso x x p10) (x))
+        (test/fp-relation-r "x + x = 10" ((fp-pluso x x ten) (x))
             (displayln 'results))
-        (test/fp-relation-r "x + (x*x) = 1" (((fp-pluso x y one) (fp-multo x x y)) (x y))
+        (test/fp-relation-r "x + (x*x) = 1" ((quadratic-form1 x) (x))
             (displayln 'results))
-        (test/fp-relation-r "x * (x + 1) = 1" (((fp-multo x y one) (fp-pluso x one y)) (x y))
+        (test/fp-relation-r "x * (x + 1) = 1" ((quadratic-form2 x) (x))
             (displayln 'results))))
 
 
-(set! precision 4)
-(run-tests table3-test-suite)
-
-(set! precision 5)
-(run-tests table3-test-suite)
-
-(set! precision 6)
-(run-tests table3-test-suite)
-
-(set! precision 7)
 (run-tests table3-test-suite)
