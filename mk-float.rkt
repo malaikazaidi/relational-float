@@ -3,10 +3,10 @@
 (require "mk.rkt")
 (require "numbers.rkt")
 (require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
-(provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision)
+(provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision fp-decompo fp-finiteo)
 
 (define BIAS (build-num 127))
-(define precision 16)
+(define precision 4)
 (define UNIT-MANTISSA (append (make-list (- precision 1) 0) '(1)))
 (define ZERO-MANTISSA (make-list precision 0))
 (define FULL-EXP '(1 1 1 1  1 1 1 1))
@@ -405,7 +405,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
         (fp-decompo f1 sign1 expo1 mant1)
         (fp-decompo f2 sign2 expo2 mant2)
         (fp-decompo r rsign rexpo rmant)
-        
         (conde
             ((fp-specialpluso sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant))
             ;(+/- x) + (+/- y) = (+/- z) (x, y \in R) (z \in R \cup {+/- \inf})
@@ -481,6 +480,7 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
          (fp-infiniteo sign2 expo2 mant2)
          (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1))))
 
+
 #|
 (fp-multo f1 f2 r)
     f1: A MKFP number.
@@ -518,7 +518,6 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                 (drop-leastsig-bito mant1mant2 pre-mantr ls-bits)
 
                 ; (5) check if we need to +1 to the exponent
-                
                 (conde
                    ((mantissa-lengtho ls-bits)  ; 16 bits
                     (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
