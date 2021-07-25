@@ -1,8 +1,8 @@
 #lang racket
 
-(require rackunit rackunit/text-ui "build-float.rkt")
+(require rackunit rackunit/text-ui "float.rkt")
 
-(define zero  `(0 ,(list) ,(list)))
+(define zero  `(0 ,(list) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0)))
 (define one   '(0 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
 (define none  '(1 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
 (define four  '(0 (1 0 0 0 0 0 0 1) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
@@ -95,9 +95,9 @@
 )
 
 (define denormaldecimal-truncation-test
-  (test-suite "Tests for denormal decimals on build-truncated-float.rkt"
+  (test-suite "Tests for denormal decimals on build-truncated-float.rkt, should all be zero"
               (test-case "2^-149"
-                         (check-equal? (build-truncated-float (expt 2 -149)) psmallestd))
+                         (check-equal? (build-truncated-float (expt 2 -149)) zero))
               (test-case "Largest Denormal Number"
                          (let* ([testnum (* (expt 2 -126) (- 1 (expt 2 -23)))])
                           (check-equal? (build-truncated-float testnum) plargestd)))
