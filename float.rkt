@@ -2,16 +2,16 @@
 
 (provide reify reify-exp reify-mantissa reify-sign
          get-sign get-mantissa get-exp
-         fp-zero?
          POS-INFINITY NEG-INFINITY NaN FP-ERR
          build-truncated-float)
 
-(define num '(;sign
-              0 ; positive
-              '(1 1 1 1 1 1 1 1) ;exponent ; first bit is the least significant
-              '(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1) ; mantissa ; first bit is the least significant, always contains the leading one.
-              )
-)
+; Representation of a floating point number p=16.
+;'(
+;  0                                      ; sign     ; positive
+;  '(1 1 1 1  1 1 1 1)                    ;exponent  ; first bit is the least significant
+;  '(0 0 0 0  0 0 0 0  0 0 0 0   0 0 0 1) ; mantissa ; first bit is the least significant, always contains the leading one.
+; )
+
 
 ;Constant for reporting an error
 (define FP-ERR 'FP-ERR)
@@ -29,14 +29,14 @@
 (define FULL-EXP '(1 1 1 1 1 1 1 1)) ; For detecting +/- infinity or NaN
 (define ZERO-MANTISSA (make-list PRECISION 0))
 
-; -------------------------------------------------
-; |  Reifier & Representation Deconmposition Code |
-; -------------------------------------------------
-
+; ---------------------------------
+; | Representation Deconmposition |
+; ---------------------------------
 
 #|
 (get-sign f)
   f: A MKFP number
+
   Returns the sign bit of f. 
 |#
 (define (get-sign f) (first f))
@@ -44,6 +44,7 @@
 #|
 (get-exp f)
   f: A MKFP number
+
   Returns the eight exponent bits of f. 
 |#
 (define (get-exp f) (second f))
@@ -51,14 +52,73 @@
 #|
 (get-mantissa f)
   f: A MKFP number
+
   Returns the 23 fractional bits of f. Also known as the significand or mantissa. 
 |#
 (define (get-mantissa f) (third f))
+
+; -------------------
+; | Reify Functions |
+; -------------------
+
+#|
+(reify-frac mantissa)
+  mantissa: The mantissa bits of a MKFP number.
+
+  Returns the Racket float equivallent of what the mantissa is. 
+|#
+(define (reify-mantissa mantissa)
+    (reify-bitlist mantissa (+ (- PRECISION) 1)))
+
+#|
+(reify-exp exponent)
+  exp: The exponent bits of a MKFP number.
+
+  Returns the value of the shifted exponent. 
+|#
+(define (reify-exp exponent)
+    (- (reify-bitlist exponent 0) EXPONENT-SHIFT)) ; StoredExponent - 127
+
+
+#|
+(reify-sign man)
+  sgn: The sign bit of a MKFP number.
+
+  Returns 1 if sgn is zero and -1 if sgn is 1. Otherwise FP-ERR is returned. 
+|#
+(define/match (reify-sign sign)
+  [(0) 1]
+  [(1) -1]
+  [(_) FP-ERR])
+
+#|
+(reify mkfp)
+  mkfp: A MKFP number.
+
+  Returns the Racket float equivallent of what float mkfp refers to. 
+|#
+(define (reify mkfp)
+  (let*
+      ([sign       (reify-sign (get-sign mkfp))]
+       [mantissa   (get-mantissa mkfp)]
+       [stored-exp (get-exp mkfp)])
+
+    (cond
+      [(inf? stored-exp mantissa) (cond
+                                    [(equal? 1 sign) POS-INFINITY]
+                                    [(equal? -1 sign) NEG-INFINITY])]
+      
+      [else (let* ([frac        (reify-mantissa mantissa)]
+                   [shifted-exp (reify-exp stored-exp)])
+              (* sign (expt 2 shifted-exp) frac))])))
+
+; Function so that the reifier can identify infinities.
 
 #|
 (inf? exponent man)
   exponent: The exponent bits of a MKFP number.
   mantissa: The mantissa bits of a MKFP number.
+
   Returns true if and only if all the exponent bits are 1 and if all the mantissa bits are 0. 
 |#
 (define (inf? exponent mantissa)
@@ -69,83 +129,13 @@
 
         (and inf-exponent? MSB-one? zero-fraction?)))
 
-#|
-(NaN? exponent mantissa)
-  exponent: The exponent bits of a MKFP number.
-  mantissa: The mantissa bits of a MKFP number.
-
-  Returns true iff all the exponent bits are 1 and the bits after the MSB are non-zero.
-|#
-(define (NaN? exponent mantissa)
-    (let* 
-        ([NaN-exponent? (equal? exponent FULL-EXP)]
-         [MSB-one?     (equal? 1 (last mantissa))]
-         [nonzero-fraction? (ormap 
-                                (lambda (int) (not (zero? int)))
-                                (drop-right mantissa 1))])
-
-         (and NaN-exponent? MSB-one? nonzero-fraction?)))
-
+; Tail recursive function for turning a list of binary digits (little-endian)
+; into a numeric value.
 
 #|
-(fp-zero? exponent mantissa)
-  exp: The exponent bits of a MKFP number.
-  man: The mantissa bits of a MKFP number.
-  Returns true if and only if all the exponent bits are 0 and if all the mantissa bits are 0. 
-|#
-(define/match (fp-zero? exponent mantissa)
-    [((list) ZERO-MANTISSA) #t]
-    [(_ _) #f])
-
-#|
-(reify mkfp)
-  mkfp: A MKFP number.
-  Returns the Racket float equivallent of what float mkfp refers to. 
-|#
-(define (reify mkfp)
-  (let* ([sign       (reify-sign (get-sign mkfp))]
-         [mantissa   (get-mantissa mkfp)]
-         [stored-exp (get-exp mkfp)])
-    (cond
-      [(inf? stored-exp mantissa) (cond
-                                    [(equal? 1 sign) POS-INFINITY]
-                                    [(equal? -1 sign) NEG-INFINITY])]
-      [(NaN? stored-exp mantissa) NaN]
-      [else (let* ([frac        (reify-mantissa mantissa)]
-                   [shifted-exp (reify-exp stored-exp)])
-              (* sign (expt 2 shifted-exp) frac))])))
-
-#|
-(reify-frac mantissa)
-  mantissa: The mantissa bits of a MKFP number.
-  Returns the Racket float equivallent of what the mantissa is. 
-|#
-(define (reify-mantissa mantissa)
-    (reify-bitlist mantissa (+ (- PRECISION) 1)))
-
-#|
-(reify-exp exponent)
-  exp: The exponent bits of a MKFP number.
-  Returns the value of the shifted exponent. 
-|#
-(define (reify-exp exponent)
-    (- (reify-bitlist exponent 0) EXPONENT-SHIFT)) ; StoredExponent - 127
-
-
-#|
-(reify-sign man)
-  sgn: The sign bit of a MKFP number.
-  Returns 1 if sgn is zero and -1 if sgn is 1. Otherwise FP-ERR is returned. 
-|#
-(define/match (reify-sign sign)
-  [(0) 1]
-  [(1) -1]
-  [(_) FP-ERR])
-
-#|
-(bitlist-to-int-helper bitlist starting-exponent acc)
+(bitlist-to-int-helper bitlist LSB-exponent acc)
     bitlist: A list of bits in little endian form.
-    LSB-exponent The implicit exponent of the first bit (set to zero to get integers only)
+    LSB-exponent: The implicit exponent of the first bit (set to zero to get integers only)
 
     if bitlist = (b0, b1, b2, ..., bn) and LSB-exponent = s then we return the value of the following
     sum:
@@ -178,13 +168,24 @@
             (reify-bitlist-helper bitlist-rest next-k next-acc))])
  
 
-; ----------------------------------------
-; | 
-; ----------------------------------
+; ---------------------------------------------------------
+; | Build A MK Floating-Point Number Function [Truncated] |
+; ---------------------------------------------------------
+
+#|
+(build-truncated-float r)
+  r: A racket float.
+  Returns a MKFP representation of the floating point number r.
+|#
+(define (build-truncated-float r) 
+    (build-truncated-float-helper r PRECISION))1
+
+; Functions for turinging an integer into a bitlist which represents the same integer in binary.
 
 #|
 (int-to-bitlist z)
   z: integer? and positive?
+
   Returns a list of bits with no leading 0's that represent z in binary.
   Note that the list is in little-endian format, i.e. the least significant bit is first.
   Note that z must be non-negative.
@@ -206,6 +207,9 @@
             (cond
               [(equal? q 0) (int-to-bitlist-helper -1 (cons r acc))]
               [else         (int-to-bitlist-helper q (cons r acc))]))]))
+
+
+; Function that builds an integer bitlist but one which is capped by a maximum number of bits.
 
 #|
 (build-intbitlist z p)
@@ -247,6 +251,7 @@
 (build-fracbitlist r p)
   r: The real numbered fraction being converted to a magnitude bitlist.
   p: The precision of the bitlist.
+
   Returns a pair (bitlist . exp)
   bitlist:
     - A bitlist representing the most significant bits of r using only p degrees of precision.
@@ -267,6 +272,7 @@
   bitlist: The current bitlist created so far.
   p: The precision.
   generate: A function that takes in a number and spits out a pair (residual . bit)
+
   Fills the rest of the precision left in the bitlist.
 |#
 (define/match (bitlist-filler bitlist p generate x) 
@@ -286,11 +292,12 @@
   generate: the advancing function.
   cap: The max number of times generate will be called.
   n: an accumulator that counts how many times generate was called.
+
   Returns the pair (x' . n') where x' is the result of calling generate n' times succesively.
   0 <= n' <= cap.
 |#
 (define/match (advance-to-leading-bit x generate n cap)
-  [(x generate z z) (cons x z)]; When n == cap.
+  [(x _ z z)          (cons x z)]; When n == cap.
   [(x generate n cap) (let* ([pair     (generate x)]
                              [residual (car pair)]
                              [bit      (cdr pair)])
@@ -336,6 +343,25 @@
         
         (list sign int frac)))
 
+#|
+(build-truncated-float-helper r p)
+  r: A number.
+  p: The number of bits used in the mantissa.
+
+  Helper function for build-truncated-float. This function builds a floating-point
+  representation of r using truncated rounding. The returned representation will use
+  one bit for the sign of r, 8 bits for the magnitude of r [exponent], and exactly p
+  bits for the mantissa.
+
+  This function breaks the problem into three main cases.
+  1) It is a large integer that has no room in the mantissa for anything that would
+     follow a decimal point.
+  
+  2) It is a number in the interval [0, 1) 
+
+  3) It is a number with a non-zero integer part and a non-zero fractional part.
+
+|#
 (define (build-truncated-float-helper r p)
     (let* 
         ([sign-int-frac   (decompose-real r)]
@@ -347,12 +373,14 @@
          [binary-integer    (car intbitlist-pair)]
          [intMSB-exp        (cdr intbitlist-pair)]
          [integer-bitlength (+ intMSB-exp 1)])
-     (cond
+      (cond
+      ; Case 1.
       [(>= intMSB-exp p) (let* ([exp-n (+ EXPONENT-SHIFT intMSB-exp)]
                                        [exponent (int-to-bitlist exp-n)])
 
                                     (list sign exponent binary-integer))] ; We know we are dealing with a pure integer.
 
+      ; Case 2.
       [(equal? intMSB-exp -1) (cond [(equal? fractional-part 0) `(0 () ,ZERO-MANTISSA)]
                                     [else
                                        (let* ([frac-pair   (build-fracbitlist fractional-part p)]; need p bits, Dealing with a pure fraction.
@@ -373,6 +401,7 @@
 
                                          (list sign exponent adjusted-frac))])]
 
+      ; Case 3.
       [else (let* ([remaining-bits (- p integer-bitlength)]; p - #of integer bits
                    [frac-pair     (build-fracbitlist fractional-part remaining-bits)]; need the remianing-precision bits.
                    [frac          (car frac-pair)]; Extract the computed fraction.
@@ -388,13 +417,6 @@
                    [mantissa (append frac-mantissa binary-integer)]
                    [exp-n    (+ EXPONENT-SHIFT intMSB-exp)]
                    [exponent (int-to-bitlist exp-n)])
-                  (list sign exponent mantissa))]))
-)
+                  (list sign exponent mantissa))])))
 
-#|
-(build-truncated-float r)
-  r: A racket float.
-  Returns a MKFP representation of the floating point number r.
-|#
-(define (build-truncated-float r) 
-    (build-truncated-float-helper r PRECISION))
+
