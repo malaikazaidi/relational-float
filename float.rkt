@@ -178,7 +178,7 @@
   Returns a MKFP representation of the floating point number r.
 |#
 (define (build-truncated-float r) 
-    (build-truncated-float-helper r PRECISION))1
+    (build-truncated-float-helper r PRECISION))
 
 ; Functions for turinging an integer into a bitlist which represents the same integer in binary.
 

@@ -6,7 +6,7 @@
 (provide fp-pluso fp-multo mantissa-lengtho expo-lengtho fp-< fp-<= fp-= precision fp-decompo fp-finiteo)
 
 (define BIAS (build-num 127))
-(define precision 4)
+(define precision 16)
 (define UNIT-MANTISSA (append (make-list (- precision 1) 0) '(1)))
 (define ZERO-MANTISSA (make-list precision 0))
 (define FULL-EXP '(1 1 1 1  1 1 1 1))
@@ -51,8 +51,11 @@ Decomposes fp number into sign, exponent, and mantissa
         (== fp (list sign expo mantissa))
         (mantissa-lengtho mantissa)
         (conde 
-            ((=/= expo '()) (appendo mantissa-head (list 1) mantissa))
-            ((== expo '())  (== mantissa ZERO-MANTISSA)))))
+            ((=/= expo '()) (=/= expo FULL-EXP)
+             (appendo mantissa-head (list 1) mantissa)) ; These numbers are non-zero but finite.
+
+            ((== expo FULL-EXP) (== mantissa UNIT-MANTISSA)) ; Only allow infinities
+            ((== expo '())  (== mantissa ZERO-MANTISSA))))) ; Only allow normalized numbers + 0.
 
 #|
 (fp-finiteo sign expo mantissa)
@@ -480,6 +483,30 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
          (fp-infiniteo sign2 expo2 mant2)
          (fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1))))
 
+#|
+(fp-multo-compute-expoo expo1 expo2 ls-bits rexpo)
+    expo1: The exponent of a MKFP number.
+    expo2: The exponent of a MKFP number.
+    ls-bits: The bits dropped from the products mantissa calculation.
+    rexpo: The exponent of a MKFP number which is the product of the
+           numbers associated to expo1 and expo2.
+
+    Relates the exponents of the multiplicitands and the dropped bits
+    of the computed mantissa to the exponent of the product.
+|#
+(define (fp-multo-compute-expoo expo1 expo2 ls-bits rexpo)
+  (fresh (pre-rexpo expo-sum)
+      ; Check if we need to +1 to the exponent
+      (conde
+          ((mantissa-lengtho ls-bits)  ; 16 bits
+           (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
+          
+          ((mantissa-length-minus1o ls-bits) ; 15 bits
+           (== pre-rexpo rexpo)))
+
+      ; Compute sum of the exponents, to compute rexpo
+      (pluso expo1 expo2 expo-sum)
+      (pluso BIAS pre-rexpo expo-sum)))
 
 #|
 (fp-multo f1 f2 r)
@@ -505,8 +532,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
-             (fresh (pre-rexpo expo-sum mant1mant2 pre-mantr ls-bits) 
-                ; check overflow
+             (fresh (mant1mant2 pre-mantr ls-bits) 
+                ; (5) Check for overflow
                 (fp-overflowo rexpo pre-mantr rmant)
 
                 ; mantissa *
@@ -517,17 +544,8 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
                 ; (3) Keep only p digits of the mantissa
                 (drop-leastsig-bito mant1mant2 pre-mantr ls-bits)
 
-                ; (5) check if we need to +1 to the exponent
-                (conde
-                   ((mantissa-lengtho ls-bits)  ; 16 bits
-                    (pluso '(1) pre-rexpo rexpo)) ; add one to exponent    
-                   ((mantissa-length-minus1o ls-bits) ; 15 bits
-                    (== pre-rexpo rexpo)))
-
-                ; add the exponent
-                ; (4) Compute sum of the exponents, to compute rexpo
-                (pluso expo1 expo2 expo-sum)
-                (pluso BIAS pre-rexpo expo-sum)))) 
+                ; (4) Compute the exponent of the product
+                (fp-multo-compute-expoo expo1 expo2 ls-bits rexpo)))) 
         
         (expo-lengtho expo1)
         (expo-lengtho expo2)

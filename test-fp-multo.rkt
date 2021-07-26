@@ -186,6 +186,6 @@
 ;(run-tests ones-test)
 ;(displayln epsilon)
 ;(displayln (run 1 (x) (fp-multo epsilon epsilon x)))
-(displayln "running 10 msb test")
-(time (run 1 (x) (fp-multo msb-10one msb-10one x)))
+;(displayln "running 10 msb test")
+;(time (run 1 (x) (fp-multo msb-10one msb-10one x)))
 
