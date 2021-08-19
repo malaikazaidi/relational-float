@@ -1,5 +1,5 @@
 #lang racket
-(require rackunit rackunit/text-ui "float.rkt" "numbers.rkt")
+(require rackunit rackunit/text-ui "mk-float.rkt" "mk-float-base.rkt" "numbers.rkt")
 
 (define zero  `(0 ,(list) (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0)))
 (define one   '(0 (1 1 1 1 1 1 1)   (0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)))
@@ -58,8 +58,6 @@
                          (check = (reify p12.5) 12.5))
               (test-case "Given mkfp(-45.125) -> -45.125"
                          (check = (reify n45.125) -45.125))
-              (test-case "Given mkfp(NaN) -> 'NaN"
-                         (check equal? (reify nan) NaN))
               (test-case "Given mkfp(pinf) -> 'positive-infinity"
                          (check equal? (reify pinf) POS-INFINITY))
               (test-case "Given mkfp(ninf) -> 'negative-infinity"

@@ -5,11 +5,49 @@
 (require "mk-float-base.rkt")
 (require "test-numbers.rkt") ;Un-comment require to play with test-numbers in REPL.
 (provide fp-pluso fp-multo fp-< fp-<= fp-= fp-decompo fp-negateo fp-zero? fp-nonzero?
-         fp-finite? fp-infinite?)
+         fp-finite? fp-infinite? reify build-truncated-float)
 
 (define float-format '(sign
                        expo ; Oleg number
                        mantissa)) ; Oleg number
+
+; ===========
+; | Reifier |
+; ===========
+
+#|
+(reify mkfp)
+  mkfp: A MKFP number.
+
+  Returns the Racket float equivallent of what float mkfp refers to. 
+|#
+(define (reify mkfp)
+  (let*
+      ([sign       (reify-sign (get-sign mkfp))]
+       [mantissa   (get-mantissa mkfp)]
+       [stored-exp (get-exp mkfp)])
+
+    (cond
+      [(inf? stored-exp mantissa) (cond
+                                    [(equal? 1 sign) POS-INFINITY]
+                                    [(equal? -1 sign) NEG-INFINITY])]
+      
+      [else (let* ([frac        (reify-mantissa mantissa)]
+                   [shifted-exp (reify-exp stored-exp)])
+              (* sign (expt 2 shifted-exp) frac))])))
+
+; ========================================================
+; | MiniKanren Floating Point Number Builder [TRUNCATED] |
+; ========================================================
+
+(define (build-truncated-float x)
+  (build-truncated-float-helper x PRECISION))
+
+
+; ==================================================
+; | MiniKanren Floating Point Arithmetic Relations |
+; ==================================================
+
 
 #|
 (fp-pluso f1 f2 r)

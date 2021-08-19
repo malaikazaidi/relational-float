@@ -1,6 +1,6 @@
 #lang racket
 
-(require rackunit rackunit/text-ui "mk.rkt" "float.rkt" "mk-float.rkt")
+(require rackunit "mk.rkt" "mk-float-base.rkt")
 (provide create-mk-length< create-mk-length> create-mk-length= check-mk-pred check-mk-length> check-mk-length< check-mk-length= check-fp-equal?
          check-list-fp-equal? check-results-fp-equal? check-results-list-fp-equal? run/time test/fp-relation-r)
 
