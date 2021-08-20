@@ -158,41 +158,25 @@
              (fp-zeroo sign2 expo2 mant2)
              (== sign1 1))
 
-            ;f1<0 and f2>0
+            
+            ; now we know f1 and f2 are non-zero.
             ((fp-nonzeroo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 1)
-             (== sign2 0))
+             (conde
+               ;f1<0 and f2>0
+               ((== sign1 1) (== sign2 0))
+              
+               ;f1,f2 >0 and expo of f2 is larger
+               ((== sign1 0) (== sign2 0) (<o expo1 expo2))
 
-            ;f1,f2 >0 and expo of f2 is larger
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 0)
-             (== sign2 0)
-             (<o expo1 expo2))
+               ;f1,f2 <0 and expo of f2 is smaller
+               ((== sign1 1) (== sign2 1) (<o expo2 expo1))
 
-            ;f1,f2 <0 and expo of f2 is smaller
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 1)
-             (== sign2 1)
-             (<o expo2 expo1))
+               ;f1,f2 >0 and expo are equal and mantissa of f2 is larger
+               ((== sign1 0) (== sign2 0) (== expo1 expo2) (<o mant1 mant2))
 
-            ;f1,f2 >0 and expo are equal and mantissa of f2 is larger
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 0)
-             (== sign2 0)
-             (== expo1 expo2)
-             (<o mant1 mant2))
-
-            ;f1,f2 <0 and expo are equal and mantissa of f2 is smaller
-            ((fp-nonzeroo sign1 expo1 mant1)
-             (fp-nonzeroo sign2 expo2 mant2)
-             (== sign1 1)
-             (== sign2 1)
-             (== expo1 expo2)
-             (<o mant2 mant1)))
+               ;f1,f2 <0 and expo are equal and mantissa of f2 is smaller
+               ((== sign1 1) (== sign2 1) (== expo1 expo2) (<o mant2 mant1)) )))
 
         (expo-lengtho expo1)
         (expo-lengtho expo2)))
