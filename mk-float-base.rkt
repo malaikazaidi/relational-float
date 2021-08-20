@@ -12,7 +12,7 @@
          get-sign get-exp get-mantissa reify-mantissa reify-exp reify-sign inf? build-truncated-float-helper)
 
 ; Constants used for the entire system
-(define PRECISION 16) ; CHANGE THIS TO CHANGE THE PRECISION OF THE RELATION SYSTEM
+(define PRECISION 7) ; CHANGE THIS TO CHANGE THE PRECISION OF THE RELATION SYSTEM
 
 (define ZERO-MANTISSA (make-list PRECISION 0))
 (define FULL-EXP '(1 1 1 1  1 1 1 1))
@@ -491,11 +491,11 @@ Drops least significant bit in the mantissa, where cap is 24 bits.
     If expo is '(1 1 1 1  1 1 1 1), equate rmant to '(0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 1)
     otherwise mant == rmant
 |#
-(define (fp-overflowo expo mant rmant)
+(define (fp-overflowo expo mant rexpo rmant)
     (conde 
-        ((=/= expo FULL-EXP) (=/= expo '()) (== mant rmant))
-        ((== expo FULL-EXP)
-         (== rmant UNIT-MANTISSA))))
+        ((<o expo FULL-EXP) (=/= expo '()) (== expo rexpo) (== mant rmant))
+        ((<=o FULL-EXP expo)
+         (== rexpo FULL-EXP) (== rmant UNIT-MANTISSA))))
 
 #|
 (fp-zeroo sign expo mantissa)
@@ -712,18 +712,18 @@ Decomposes fp number into sign, exponent, and mantissa
     Floating-Point Addition for same signs
 |#
 (define (fp-samesignaddero expo1 mant1 expo2 mant2 expo-diff rexpo rmant)
-    (fresh (shifted-mant1 mant-sum pre-rmant bit)
+    (fresh (shifted-mant1 mant-sum pre-rmant bit pre-rexpo)
         ;shift the mantissa of the SMALLER exponent
         (mantissa-shifto mant1 expo-diff shifted-mant1)
         
-        (conde ((== bit '()) (== rexpo expo2))
-               ((=/= bit '()) (pluso '(1) expo2 rexpo)))
-
+        (conde ((== bit '()) (== pre-rexpo expo2))
+               ((=/= bit '()) (pluso '(1) expo2 pre-rexpo)))
+        (fp-overflowo pre-rexpo pre-rmant rexpo rmant)
         (drop-leastsig-bito mant-sum pre-rmant bit)
-        (fp-overflowo rexpo pre-rmant rmant)
-
+        
         ; oleg number addition
-        (pluso shifted-mant1 mant2 mant-sum)))
+        (pluso shifted-mant1 mant2 mant-sum)
+        ))
 
 #|
 (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)

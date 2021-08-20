@@ -114,20 +114,21 @@
             ((fp-nonzeroo sign1 expo1 mant1) (fp-finiteo sign1 expo1 mant1)
              (fp-nonzeroo sign2 expo2 mant2) (fp-finiteo sign2 expo2 mant2)
              (fp-nonzeroo rsign rexpo rmant)
-             (fresh (mant1mant2 pre-mantr ls-bits) 
-                ; (5) Check for overflow
-                (fp-overflowo rexpo pre-mantr rmant)
-
+             (fresh (mant1mant2 pre-mantr ls-bits pre-rexpo) 
+                
                 ; mantissa *
                 ; (2) Compute the mantissa using Oleg number *o
                 (*o mant1 mant2 mant1mant2)
-
+                
                 ; round by chopping
                 ; (3) Keep only p digits of the mantissa
                 (drop-leastsig-bito mant1mant2 pre-mantr ls-bits)
-
+                
+                ; (5) Check for overflow
+                (fp-overflowo pre-rexpo pre-mantr rexpo rmant)
+                
                 ; (4) Compute the exponent of the product
-                (fp-multo-compute-expoo expo1 expo2 ls-bits rexpo)))) 
+                (fp-multo-compute-expoo expo1 expo2 ls-bits pre-rexpo)))) 
         
         (expo-lengtho expo1)
         (expo-lengtho expo2)
