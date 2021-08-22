@@ -1,5 +1,18 @@
 #lang racket
 
+(require "mk-float.rkt")
+(require "mk.rkt")
+
+(define (printer fp)
+  (begin
+    (display fp)
+    (display "\t")
+    (let*
+        ([real-value (reify fp)])
+      (cond
+        [(symbol? real-value) (displayln real-value)]
+        [else (displayln (number->string (reify fp)))]))))
+
 #|
 Example using the 'fp-multo' relation.
 
@@ -7,18 +20,17 @@ Here we compute the product of twenty and two and
 compute the quotient between twenty and two 
 |#
 
-(require "mk-float.rkt")
-(require "mk.rkt")
-
 ; PRECISION is 8
 
-(define two (build-truncated-float 2))     ; (0 (0 0 0 0  0 0 0 1) (0 0 0 0  0 0 0 1))
-(define twenty (build-truncated-float 20)) ; (0 (1 1 0 0  0 0 0 1) (0 1 0 0  0 0 0 1))
+(define two    '(0 (0 0 0 0  0 0 0 1) (0 0 0 0  0 0 0 1))) 
+(define twenty '(0 (1 1 0 0  0 0 0 1) (0 0 0 0  0 1 0 1))) 
 
-(define product (first (time (run 1 (x) (fp-multo two twenty x)))))
+; Forward Query [Multiplication]
+;(define product (first (time (run 1 (x) (fp-multo two twenty x)))))
 
-(reify product); 40
+;(printer product); 40
 
+; Backward Query [Division]
 (define quotient (first (time (run 1 (x) (fp-multo two x twenty)))))
-(reify quotient) ; 10
+(printer quotient) ; 10
 

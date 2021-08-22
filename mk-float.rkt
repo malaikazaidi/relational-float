@@ -127,7 +127,7 @@
                 ; (5) Check for overflow
                 (fp-overflowo pre-rexpo pre-mantr rexpo rmant)
                 
-                ; (4) Compute the exponent of the product
+                ; (4) Compute the exponent of the product and normalize
                 (fp-multo-compute-expoo expo1 expo2 ls-bits pre-rexpo)))) 
         
         (expo-lengtho expo1)

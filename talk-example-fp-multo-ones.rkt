@@ -1,30 +1,39 @@
 #lang racket
 
-#|
-Example using the 'fp-multo' relation.
-
-Here we show that the position of ones set in the mantissa
-greatly affect the runtime for multiplication.
-|#
-
 (require "mk-float.rkt")
 (require "mk.rkt")
 
+(define (printer fp)
+  (begin
+    (display fp)
+    (display "\t")
+    (let*
+        ([real-value (reify fp)])
+      (cond
+        [(symbol? real-value) (displayln real-value)]
+        [else (displayln (number->string (reify fp)))]))))
+
+#|
+Example using the 'fp-multo' relation which times how long fp-multo 
+takes to compute a square of a number.
+|#
+
 ; PRECISION 13
 
-(define fp0.05 (build-truncated-float 0.05))
-(define fp0.001 (build-truncated-float 0.001))
+(define fp0.001 '(0 (1 0 1 0  1 1 1)   (0 1 0 0  0 1 1 0  0 0 0 0  1)))
+(define fp0.05  '(0 (0 1 0 1  1 1 1)   (1 0 0 1  1 0 0 1  1 0 0 1  1)))
+(define fp63    '(0 (0 0 1 0  0 0 0 1) (0 0 0 0  0 0 0 1  1 1 1 1  1)))
+(define fp32888 '(0 (0 1 1 1  0 0 0 1) (1 1 1 1  0 0 0 0  0 0 0 0  1)))
 
-(displayln "Representation of 0.05")
-fp0.05
+#|
+(squareo x y)
+    x: A MKFP number
+    y: A MKFP number
 
-(displayln "")
+This relation succeeds when y = x^2.
+|#
+(define (squareo x y)
+  (fp-multo x x y))
 
-(displayln "Representation of 0.001")
-fp0.001
-
-(displayln "")
-
-(time (run 1 (x) (fp-multo fp0.05 fp0.05 x)))
-(displayln "")
-(time (run 1 (x) (fp-multo fp0.001 fp0.001 x)))
+(displayln "Running squareo...")
+(printer (first (time (run 1 (x) (squareo fp32888 x)))))

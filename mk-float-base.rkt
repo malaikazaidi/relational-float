@@ -697,35 +697,6 @@ Decomposes fp number into sign, exponent, and mantissa
 
 
 #|
-(fp-samesignaddero sign1 expo1 mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
-    sign1: The sign of the MKFP number with the smaller exponent
-    expo1: The exponent of the MKFP number with the smaller exponent
-    mant1: The mantissa of the MKFP number with the smaller exponent
-    sign2: The sign of the MKFP number with the larger exponent
-    expo2: The exponent of the MKFP number with the larger exponent
-    mant2: The mantissa of the MKFP number with the larger exponent
-    expo-diff: An Oleg number that equals (expo2 - expo1)
-    rsign: The resulting sign of the addition f1 + f2
-    rexpo: The resulting exponent of the addition f1 + f2
-    rmant: The resulting mantissa of the addition f1 + f2
-
-    Floating-Point Addition for same signs
-|#
-(define (fp-samesignaddero expo1 mant1 expo2 mant2 expo-diff rexpo rmant)
-    (fresh (shifted-mant1 mant-sum pre-rmant bit pre-rexpo)
-        ;shift the mantissa of the SMALLER exponent
-        (mantissa-shifto mant1 expo-diff shifted-mant1)
-        
-        (conde ((== bit '()) (== pre-rexpo expo2))
-               ((=/= bit '()) (pluso '(1) expo2 pre-rexpo)))
-        (fp-overflowo pre-rexpo pre-rmant rexpo rmant)
-        (drop-leastsig-bito mant-sum pre-rmant bit)
-        
-        ; oleg number addition
-        (pluso shifted-mant1 mant2 mant-sum)
-        ))
-
-#|
 (fp-swapo sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
     sign1: The sign of the MKFP number with the smaller exponent
     expo1: The exponent of the MKFP number with the smaller exponent
@@ -743,11 +714,47 @@ Decomposes fp number into sign, exponent, and mantissa
 (define (fp-swapo expo1 mant1 expo2 mant2 rexpo rmant)
     (fresh (expo-diff)  
         (conde
-            ((pluso expo-diff expo1 expo2)
-             (fp-samesignaddero expo1 mant1 expo2 mant2 expo-diff rexpo rmant))
+            ((pluso expo-diff expo1 expo2) ; Exponent 2 >= Expoenent 1
+             (fp-samesignaddero mant1 expo2 mant2 expo-diff rexpo rmant))
+            
             ((=/= expo1 expo2)
-             (pluso expo-diff expo2 expo1)
-             (fp-samesignaddero expo2 mant2 expo1 mant1 expo-diff rexpo rmant)))))
+             (pluso expo-diff expo2 expo1); Exponent 2 < Exponent 1
+             (fp-samesignaddero mant2 expo1 mant1 expo-diff rexpo rmant)))))
+
+#|
+(fp-samesignaddero mant1 sign2 expo2 mant2 expo-diff rsign rexpo rmant)
+    sign1: The sign of the MKFP number with the smaller exponent
+    expo1: The exponent of the MKFP number with the smaller exponent
+    mant1: The mantissa of the MKFP number with the smaller exponent
+    sign2: The sign of the MKFP number with the larger exponent
+    expo2: The exponent of the MKFP number with the larger exponent
+    mant2: The mantissa of the MKFP number with the larger exponent
+    expo-diff: An Oleg number that equals (expo2 - expo1)
+    rsign: The resulting sign of the addition f1 + f2
+    rexpo: The resulting exponent of the addition f1 + f2
+    rmant: The resulting mantissa of the addition f1 + f2
+
+    Floating-Point Addition for same signs
+|#
+(define (fp-samesignaddero mant1 expo2 mant2 expo-diff rexpo rmant)
+    (fresh (shifted-mant1 mant-sum pre-rmant bit pre-rexpo)
+        ; Shift the mantissa of the SMALLER exponent
+           (mantissa-shifto mant1 expo-diff shifted-mant1)
+           
+        ; Add 1 to the exponent as necessary
+        (conde ((== bit '()) (== pre-rexpo expo2))
+               ((=/= bit '()) (pluso '(1) expo2 pre-rexpo)))
+
+        ; Check for overflow
+        (fp-overflowo pre-rexpo pre-rmant rexpo rmant)
+
+        ; Rounding by chopping
+        (drop-leastsig-bito mant-sum pre-rmant bit)
+        
+        ; oleg number addition
+        (pluso shifted-mant1 mant2 mant-sum)))
+
+
 
 #|
 (fp-specialpluso sign1 expo1 mant1 sign2 expo2 mant2 rsign rexpo rmant)
